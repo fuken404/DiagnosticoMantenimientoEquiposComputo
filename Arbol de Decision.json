@@ -1,0 +1,214 @@
+{
+  "¿El Equipo Enciende?": [
+    {
+      "NO": [
+        {
+          "¿El Cable de Energía está Bien?": [
+            {
+              "No": "Falla 01: Cable o toma electrica defectuosa"
+            },
+            {
+              "SI": [
+                {
+                  "¿Se Detecta Olor o Señal de Quemado?": [
+                    {
+                      "Si": "Falla 02: Componente quemado o cortocircuito"
+                    },
+                    {
+                      "NO": [
+                        {
+                          "¿El Botón de Encedido Hace Contacto": [
+                            {
+                              "Si": "Falla 03: Fuente de Alimentacion Muerta o Placa Madre Dañada",
+                              "No": "Falla 04: Boton de Power Atascado o Cableado Defectuoso"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "SI": [
+        {
+          "¿Qué sucede al encender?": [
+            {
+              "Ventiladores Funcionan pero No Hay Imagen": [
+                {
+                  "¿Monitor Tiene Señal o Retroalimentación?": [
+                    {
+                      "Si": "Falla 05: Monitor Encendido sin Señal Útil Monitor o Panel Dañado"
+                    },
+                    {
+                      "NO": [
+                        {
+                          "Cable Video y Monitor Encendido": [
+                            {
+                              "No": "Falla 06: Cable Video Defectuoso o Mal Conexion"
+                            },
+                            {
+                              "SI": [
+                                {
+                                  "¿Emite Pitidos al Arrancar": [
+                                    {
+                                      "No": "Falla 07: Salida de Video sin POST Probar GPU o RAM"
+                                    },
+                                    {
+                                      "SI": [
+                                        {
+                                          "¿Qué Pitidos Emite?": [
+                                            {
+                                              "1 Largo 2 Cortos": "Falla 08: Error en Tarjeta de Video",
+                                              "Pitidos Continuos": "Falla 09: Problema de Memoria RAM",
+                                              "Código Beep Distinto": "Falla 10: Error en Bios"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "Se Muestra Imagen pero no Inicial el SO": [
+                {
+                  "¿Se Puede Ingresar a la Bios?": [
+                    {
+                      "No": "Falla 11: BIOS Inaccesible Problema Placa o Teclado"
+                    },
+                    {
+                      "SI": [
+                        {
+                          "¿Detecta Disco en BIOS?": [
+                            {
+                              "No": "Falla 12: Disco no Detectado Fallo Fisico o Conexion SATA M2"
+                            },
+                            {
+                              "SI": [
+                                {
+                                  "¿Aparece Mensaje no Arranque o Boot Error?": [
+                                    {
+                                      "Si": "Falla 13: Orden de Arranque o Sector MBR UEFI Dañado"
+                                    },
+                                    {
+                                      "NO": [
+                                        {
+                                          "¿El Sistema Inicia y Luego falla con BSOD o Reinicio?": [
+                                            {
+                                              "Si": "Falla 14: Pantallazo Azul Frecuente RAM o Drivers Dorruptos",
+                                              "No": "Falla 15: Sistema Operativo Corrupto o Drivers Criticos Dañados"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "Se Muestra Imagen e Inicia SO pero Está muy Lento": [
+                {
+                  "Si": "Falla 16: Modulo RAM Defectuoso o Mal Asentado"
+                },
+                {
+                  "NO": [
+                    {
+                      "¿Disco con Errores SMART o Alta Ocupacion?": [
+                        {
+                          "Si": "Falla 17: Disco con Sectores Dañados"
+                        },
+                        {
+                          "NO": [
+                            {
+                              "¿Se Reinicia Solo o se Apaga sin Aviso?": [
+                                {
+                                  "SI": [
+                                    {
+                                      "¿Hay Sobrecalentamiento?": {
+                                        "Si": "Falla 18: Sobrecalentamiento por Ventilacion o Pasta Termica",
+                                        "No": "Falla 19: Fuente de Poder Inestable o Defectuosa"
+                                      }
+                                    }
+                                  ],
+                                  "NO": [
+                                    {
+                                      "¿Los Periféricos Funcionan Correctamente?": [
+                                        {
+                                          "NO": [
+                                            {
+                                              "¿Se Detectan en Bios?": {
+                                                "Si": "Falla 20: Fallo de Drivers de Perifericos en Sistema Operativo",
+                                                "No": "Falla 21: Puertos Fisicos o Controladores de Placa Dañados"
+                                              }
+                                            }
+                                          ],
+                                          "SI": [
+                                            {
+                                              "¿Imagen Presenta Parpadeos o Lineas?": [
+                                                {
+                                                  "Si": "Falla 22: Problema en GPU o Cable Panel"
+                                                },
+                                                {
+                                                  "NO": [
+                                                    {
+                                                      "¿Sonido Funciona Correctamente?": [
+                                                        {
+                                                          "No": "Falla 23: Drivers de Audio Corruptos o Tarjeta de Audio Dañada"
+                                                        },
+                                                        {
+                                                          "SI": [
+                                                            {
+                                                              "¿Red y WiFi Funcionan Correctamente?": {
+                                                                "No Detecta la Tarjeta": "Falla 24: Tarjeta de Red Físicamente Dañada",
+                                                                "Detecta Tarjeta pero no Conecta": "Falla 25: Problema de Drivers o Configuracion de Red",
+                                                                "Si": "Equipo en Correcto Funcionamiento"
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
