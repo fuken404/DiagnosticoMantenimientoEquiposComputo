@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Iniciar sesión – Sistema Experto Hardware</title>
+  <link rel="stylesheet" href="./styles.css" /> <!-- ✅ ruta correcta dentro de /front -->
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #0f172a;
+      color: #fff;
+      font-family: system-ui;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      max-width: 380px;
+      width: 100%;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.4rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    a {
+      color: #60a5fa;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Iniciar sesión</h1>
+    <form id="loginForm">
+      <input id="email" type="email" placeholder="Correo electrónico" required />
+      <input id="password" type="password" placeholder="Contraseña" required minlength="8" />
+      <button type="submit" class="primary">Ingresar</button>
+      <a href="./register.html">¿No tienes cuenta? Crear una</a>
+    </form>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:4000";
+
+    async function login(email, password) {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Login fallido");
+      return res.json();
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const emailVal = document.getElementById("email").value.trim(); // ✅ sin sombrear
+      const password = document.getElementById("password").value;
+      try {
+        await login(emailVal, password);
+        alert("✅ Sesión iniciada correctamente");
+        window.location.href = "./index.html";
+      } catch (err) {
+        alert("❌ " + err.message);
+      }
+    });
+  </script>
+</body>
+
+</html>
