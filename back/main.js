@@ -14,6 +14,7 @@ import Case from "./models/Case.js";
 import authRouter from "./routes/auth.js";
 import requireAuth from "./middlewares/requireAuth.js";
 import requireAdmin from "./middlewares/requireAdmin.js";
+import { extractRulesFromJSON } from "./seedLogic.js";
 
 dotenv.config();
 
@@ -50,105 +51,46 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 /* ---------- Seed Rules (carga la base de conocimientos) ---------- */
 app.get("/api/seed", async (_req, res) => {
   try {
-    const fs = await import("node:fs");
-    const path = await import("node:path");
+    console.log("🌱 Iniciando seed de reglas desde GET...");
     
-    const filePath = path.resolve(process.cwd(), "Arbol de Decision.json");
-    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    // Extraer reglas del JSON
+    const rules = await extractRulesFromJSON();
+    console.log(`📋 Se extrajeron ${rules.length} reglas del JSON`);
     
-    // Limpia las reglas existentes
+    // Limpiar reglas existentes
     await Rule.destroy({ where: {} });
+    console.log("🗑️  Reglas previas eliminadas");
     
-    // Aquí extraemos las reglas del JSON (simplificado)
-    // En producción, importarías la lógica de seed_rules.js
-    const rules = [];
-    const extractRules = (node, conds = []) => {
-      if (typeof node === "string") {
-        const m = node.match(/F(\d{2,})/i);
-        const ruleId = m ? `F${m[1]}` : `F${String(rules.length + 1).padStart(2, "0")}`;
-        rules.push({
-          ruleId,
-          fault: node.trim(),
-          conditions: conds,
-          weight: 0.8,
-          advice: []
-        });
-        return;
-      }
-      if (Array.isArray(node)) {
-        node.forEach(item => extractRules(item, conds));
-        return;
-      }
-      if (node && typeof node === "object") {
-        Object.entries(node).forEach(([key, val]) => {
-          extractRules(val, conds);
-        });
-      }
-    };
-    
-    extractRules(data);
-    
-    if (rules.length === 0) {
-      return res.status(400).json({ error: "No se pudieron extraer reglas del archivo" });
-    }
-    
+    // Insertar nuevas reglas
     await Rule.bulkCreate(rules);
-    console.log(`✅ Seed completado: ${rules.length} reglas insertadas`);
-    res.json({ ok: true, inserted: rules.length });
+    console.log(`✅ ${rules.length} reglas insertadas en la BD`);
+    
+    res.json({ ok: true, inserted: rules.length, message: `Se cargaron ${rules.length} reglas correctamente` });
   } catch (err) {
-    console.error("Seed error:", err);
+    console.error("❌ Seed error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post("/api/seed", async (_req, res) => {
   try {
-    const fs = await import("node:fs");
-    const path = await import("node:path");
+    console.log("🌱 Iniciando seed de reglas desde POST...");
     
-    const filePath = path.resolve(process.cwd(), "Arbol de Decision.json");
-    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    // Extraer reglas del JSON
+    const rules = await extractRulesFromJSON();
+    console.log(`📋 Se extrajeron ${rules.length} reglas del JSON`);
     
-    // Limpia las reglas existentes
+    // Limpiar reglas existentes
     await Rule.destroy({ where: {} });
+    console.log("🗑️  Reglas previas eliminadas");
     
-    // Aquí extraemos las reglas del JSON (simplificado)
-    const rules = [];
-    const extractRules = (node, conds = []) => {
-      if (typeof node === "string") {
-        const m = node.match(/F(\d{2,})/i);
-        const ruleId = m ? `F${m[1]}` : `F${String(rules.length + 1).padStart(2, "0")}`;
-        rules.push({
-          ruleId,
-          fault: node.trim(),
-          conditions: conds,
-          weight: 0.8,
-          advice: []
-        });
-        return;
-      }
-      if (Array.isArray(node)) {
-        node.forEach(item => extractRules(item, conds));
-        return;
-      }
-      if (node && typeof node === "object") {
-        Object.entries(node).forEach(([key, val]) => {
-          extractRules(val, conds);
-        });
-      }
-    };
-    
-    extractRules(data);
-    
-    if (rules.length === 0) {
-      return res.status(400).json({ error: "No se pudieron extraer reglas del archivo" });
-    }
-    
+    // Insertar nuevas reglas
     await Rule.bulkCreate(rules);
-    console.log(`✅ Seed completado: ${rules.length} reglas insertadas`);
-    res.json({ ok: true, inserted: rules.length });
+    console.log(`✅ ${rules.length} reglas insertadas en la BD`);
+    
+    res.json({ ok: true, inserted: rules.length, message: `Se cargaron ${rules.length} reglas correctamente` });
   } catch (err) {
-    console.error("Seed error:", err);
+    console.error("❌ Seed error:", err);
     res.status(500).json({ error: err.message });
   }
 });
