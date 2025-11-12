@@ -188,6 +188,9 @@
           <p class="sub">Reglas declarativas en JSON.</p>
           <details>
             <summary>Ver/ocultar reglas</summary>
+            <div style="margin-bottom: 12px;">
+              <button type="button" id="btnReloadRules" class="btn-small" style="background: #10b981;">🔄 Recargar reglas</button>
+            </div>
             <pre id="kbPre" class="muted" style="white-space:pre-wrap"></pre>
           </details>
           <h2 style="margin-top:20px">Notas</h2>
@@ -524,6 +527,11 @@
   });
 
   document.getElementById('btnLogout').addEventListener('click', logout);
+
+  document.getElementById('btnReloadRules').addEventListener('click', () => {
+    console.log('🔄 Recargando reglas...');
+    loadRulesFromAPI();
+  });
 
   document.getElementById('adminRuleForm').addEventListener('submit', (e) => {
     e.preventDefault();
