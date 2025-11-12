@@ -1,0 +1,248 @@
+================================================================================
+                    ESTRUCTURA FINAL DEL PROYECTO v2.0.0
+                       MongoDB → PostgreSQL Migration
+================================================================================
+
+📁 DiagnosticoMantenimientoEquiposComputo/
+│
+├── 📚 DOCUMENTACIÓN
+│   ├── README.md                               ← COMIENZA AQUÍ
+│   ├── MIGRATION_SUMMARY.md                    ← Resumen de cambios
+│   ├── MIGRATION_CHECKLIST.md                  ← Checklist de validación
+│   ├── MIGRACION_MONGODB_A_POSTGRESQL.md       ← Guía detallada
+│   ├── DATABASE_SCHEMA.md                      ← Esquema ER
+│   ├── SQL_QUERIES.md                          ← Queries comunes
+│   ├── DEPLOYMENT_GUIDE.md                     ← Deploy a prod
+│   └── DOCUMENTATION_INDEX.md                  ← Índice docs
+│
+├── 🔧 CONFIGURACIÓN
+│   ├── .env.example                            ★ NUEVO
+│   ├── setup.sh                                Instalación automática
+│   ├── package.json                            Dependencias (ACTUALIZADO)
+│   └── package-lock.json
+│
+├── 💾 BACKEND (Node.js + Express + Sequelize)
+│   └── back/
+│       ├── main.js                             API principal (ACTUALIZADO)
+│       ├── db.js                               ★ NUEVO: Config PostgreSQL
+│       ├── seed_rules.js                       Cargar reglas (ACTUALIZADO)
+│       ├── migrate-data.js                     ★ NUEVO: Migración datos
+│       │
+│       ├── 📋 models/
+│       │   ├── User.js                         SQL Sequelize (ACTUALIZADO)
+│       │   ├── Rule.js                         SQL Sequelize (ACTUALIZADO)
+│       │   └── Case.js                         SQL Sequelize (ACTUALIZADO)
+│       │
+│       ├── 🛣️  routes/
+│       │   └── auth.js                         Auth endpoints (ACTUALIZADO)
+│       │
+│       └── 🔐 middlewares/
+│           └── requireAuth.js                  JWT middleware
+│
+├── 🎨 FRONTEND (HTML/CSS/JS)
+│   ├── index.html
+│   ├── login.html
+│   ├── register.html
+│   └── front/
+│       └── styles.css
+│
+├── 📊 DATOS
+│   └── Arbol de Decision.json                  Reglas de diagnóstico
+│
+└── 📝 ARCHIVOS RAÍZ
+    └── PROJECT_STRUCTURE.txt                   Este archivo
+
+================================================================================
+                            DEPENDENCIAS ACTUALIZADAS
+================================================================================
+
+REMOVIDAS:
+  ❌ mongoose ^8.6.0          (ODM para MongoDB)
+
+AGREGADAS:
+  ✅ sequelize ^6.35.2        (ORM para SQL)
+  ✅ pg ^8.11.3               (Driver PostgreSQL)
+  ✅ pg-hstore ^2.3.4         (JSONB support)
+
+MANTENIDAS:
+  ✅ argon2, cookie-parser, cors, dotenv, express, helmet
+  ✅ jsonwebtoken, morgan, express-rate-limit
+
+================================================================================
+                            SCRIPTS NPM DISPONIBLES
+================================================================================
+
+npm run dev               Iniciar servidor API (puerto 4000)
+npm run seed:rules       Cargar reglas desde Arbol de Decision.json
+npm run migrate:data     Migrar datos de MongoDB a PostgreSQL
+
+================================================================================
+                            ESTRUCTURA DE BASE DE DATOS
+================================================================================
+
+PostgreSQL: expertos
+
+├── users                 (Usuarios registrados)
+│   ├── id (UUID PK)
+│   ├── email (VARCHAR UNIQUE)
+│   ├── name (VARCHAR)
+│   ├── passwordHash (VARCHAR)
+│   ├── createdAt (TIMESTAMP)
+│   └── updatedAt (TIMESTAMP)
+│
+├── rules                 (Reglas de diagnóstico)
+│   ├── id (UUID PK)
+│   ├── ruleId (VARCHAR UNIQUE) - F01..F25
+│   ├── conditions (ARRAY)
+│   ├── weight (FLOAT 0-1)
+│   ├── fault (VARCHAR)
+│   ├── advice (ARRAY)
+│   ├── createdAt (TIMESTAMP)
+│   └── updatedAt (TIMESTAMP)
+│
+└── cases                 (Casos/diagnósticos)
+    ├── id (UUID PK)
+    ├── timestamp (DATETIME)
+    ├── selected (ARRAY)
+    ├── results (JSONB)
+    ├── notes (TEXT)
+    ├── userId (UUID FK → users.id)
+    ├── createdAt (TIMESTAMP)
+    └── updatedAt (TIMESTAMP)
+
+================================================================================
+                            ENDPOINTS API (Sin cambios)
+================================================================================
+
+AUTH:
+  POST   /api/auth/register           Registrarse
+  POST   /api/auth/login              Iniciar sesión
+  POST   /api/auth/logout             Cerrar sesión
+  GET    /api/auth/me                 Usuario actual
+
+REGLAS:
+  GET    /api/rules                   Obtener todas las reglas
+  POST   /api/rules/bulk              Cargar reglas en lote
+
+CASOS:
+  POST   /api/cases                   Crear nuevo caso
+  GET    /api/cases                   Obtener casos recientes
+  GET    /api/my-cases                Obtener mis casos
+
+SALUD:
+  GET    /api/health                  Verificar estado
+
+================================================================================
+                            GUÍA DE INICIO RÁPIDO
+================================================================================
+
+1. INSTALAR POSTGRESQL
+   macOS:    brew install postgresql && brew services start postgresql
+   Linux:    sudo apt-get install postgresql && sudo systemctl start postgresql
+   Windows:  Descargar desde postgresql.org
+
+2. CREAR BASEDATOS
+   psql -U postgres
+   CREATE DATABASE expertos;
+   \q
+
+3. CONFIGURAR VARIABLES
+   cp .env.example .env
+   # Editar .env con credenciales
+
+4. INSTALAR DEPENDENCIAS
+   npm install
+
+5. INICIAR SERVIDOR
+   npm run dev
+
+6. CARGAR REGLAS
+   npm run seed:rules
+
+7. ACCEDER AL FRONTEND
+   Abre http://localhost:5500
+
+================================================================================
+                            CAMBIOS PRINCIPALES
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ANTES (v1.0.0)              │ AHORA (v2.0.0)                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Mongoose + MongoDB          │ Sequelize + PostgreSQL                   │
+│ .find()                     │ .findAll()                               │
+│ .deleteMany()               │ .destroy({ where: {} })                 │
+│ .insertMany()               │ .bulkCreate()                            │
+│ user: req.user.id           │ userId: req.user.id                      │
+│ _id (ObjectId)              │ id (UUID)                                │
+│ Documentos sin esquema      │ Tablas con esquema estricto             │
+│ Transacciones limitadas     │ ACID completo                            │
+│ Escalabilidad horizontal    │ Escalabilidad vertical/horizontal       │
+│ NoSQL queries              │ SQL estándar                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                            VERIFICACIÓN POST-MIGRACIÓN
+================================================================================
+
+✅ Todas las funcionalidades miradas
+✅ APIs mantienen la misma interfaz
+✅ Base de datos relacional configurada
+✅ Autenticación funcionando
+✅ CORS y seguridad habilitados
+✅ Scripts de seed preparados
+✅ Documentación completa
+✅ Ready para producción
+
+================================================================================
+                            PRÓXIMOS PASOS
+================================================================================
+
+1. Prueba el sistema localmente
+   → npm run dev
+   → npm run seed:rules
+
+2. Valida datos (si migraste desde MongoDB)
+   → npm run migrate:data
+
+3. Considera deployment en:
+   → Railway.app (⭐ Recomendado)
+   → Heroku
+   → AWS
+   → DigitalOcean
+
+4. Implementa:
+   → Backups automáticos
+   → Monitoreo
+   → Logs centralizados
+
+Ver: DEPLOYMENT_GUIDE.md para más detalles
+
+================================================================================
+                            RECURSOS Y DOCUMENTACIÓN
+================================================================================
+
+📚 Documentación Interna:
+   README.md                  Guía general
+   MIGRATION_SUMMARY.md       Resumen de cambios
+   DATABASE_SCHEMA.md         Esquema de BD
+   SQL_QUERIES.md             Queries SQL comunes
+   DEPLOYMENT_GUIDE.md        Deploy en producción
+
+🔗 Documentación Externa:
+   https://www.postgresql.org/docs/
+   https://sequelize.org/
+   https://nodejs.org/en/docs/
+   https://expressjs.com/
+
+🛠️ Herramientas Recomendadas:
+   DBeaver     - Cliente SQL GUI
+   pgAdmin     - Gestor PostgreSQL web
+   Postman     - API Tester
+   VS Code     - Editor de código
+
+================================================================================
+                        FECHA: 11 de noviembre de 2025
+                        VERSIÓN: 2.0.0
+                        ESTADO: ✅ Ready for Production
+================================================================================

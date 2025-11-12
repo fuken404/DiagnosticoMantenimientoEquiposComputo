@@ -1,6 +1,7 @@
 import { Router } from "express";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import { UniqueConstraintError, ValidationError } from "sequelize";
 import User from "../models/User.js";
 
 const router = Router();
@@ -29,12 +30,14 @@ router.post("/register", async (req, res) => {
 
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id }); // sal y parámetros seguros
   try {
-    const user = await User.create({ email, name, passwordHash });
-    const token = sign({ sub: user._id, email: user.email, name: user.name });
+    const user = await User.create({ email, name, passwordHash, role: 'user' });
+    const token = sign({ sub: user.id, email: user.email, name: user.name, role: user.role });
     setAuthCookie(res, token);
-    res.status(201).json({ ok: true, user: { id: user._id, email: user.email, name: user.name } });
+    res.status(201).json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (e) {
-    if (e.code === 11000) return res.status(409).json({ error: "Email ya registrado" });
+    if (e instanceof UniqueConstraintError) {
+      return res.status(409).json({ error: "Email ya registrado" });
+    }
     throw e;
   }
 });
@@ -42,14 +45,14 @@ router.post("/register", async (req, res) => {
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
   const { email, password } = req.body || {};
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ where: { email } });
   if (!user) return res.status(401).json({ error: "Credenciales inválidas" });
   const ok = await argon2.verify(user.passwordHash, password);
   if (!ok) return res.status(401).json({ error: "Credenciales inválidas" });
 
-  const token = sign({ sub: user._id, email: user.email, name: user.name });
+  const token = sign({ sub: user.id, email: user.email, name: user.name, role: user.role });
   setAuthCookie(res, token);
-  res.json({ ok: true, user: { id: user._id, email: user.email, name: user.name } });
+  res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 });
 
 // POST /api/auth/logout
@@ -64,7 +67,7 @@ router.get("/me", (req, res) => {
   if (!auth) return res.status(401).json({ error: "no auth" });
   try {
     const payload = jwt.verify(auth, process.env.JWT_SECRET);
-    res.json({ ok: true, user: { id: payload.sub, email: payload.email, name: payload.name } });
+    res.json({ ok: true, user: { id: payload.sub, email: payload.email, name: payload.name, role: payload.role } });
   } catch {
     res.status(401).json({ error: "token inválido" });
   }

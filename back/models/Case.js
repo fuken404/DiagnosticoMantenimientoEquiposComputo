@@ -1,22 +1,46 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import sequelize from "../db.js";
+import User from "./User.js";
 
-const CaseSchema = new mongoose.Schema(
+const Case = sequelize.define(
+  "Case",
   {
-    timestamp: { type: Date, default: () => new Date() },
-    selected: { type: [String], default: [] },
-    results: [
-      {
-        ruleId: String,
-        score: Number,
-        matched: Number,
-        total: Number,
-        weight: Number
-      }
-    ],
-    notes: { type: String, default: "" },
-    user: { type: String, default: null }
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    timestamp: {
+      type: DataTypes.DATE,
+      defaultValue: () => new Date(),
+    },
+    selected: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      defaultValue: [],
+    },
+    results: {
+      type: DataTypes.JSON,
+      defaultValue: [],
+    },
+    notes: {
+      type: DataTypes.STRING,
+      defaultValue: "",
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: User,
+        key: "id",
+      },
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    underscored: true,
+  }
 );
 
-export default mongoose.model("Case", CaseSchema);
+Case.belongsTo(User, { foreignKey: "userId", as: "user" });
+
+export default Case;

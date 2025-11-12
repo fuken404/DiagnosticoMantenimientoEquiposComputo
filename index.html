@@ -13,62 +13,72 @@
       <path d="M8 9h8M8 13h6M8 17h4" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
     </svg>
     <h1>Sistema experto para diagnóstico y mantenimiento de hardware</h1>
+    <div class="header-right">
+      <button type="button" id="btnToggleAuth" class="btn-small">Iniciar sesión</button>
+    </div>
   </header>
 
   <main>
-    <section class="card">
-      <div class="body">
-        <h2>1) Selecciona los síntomas observados</h2>
-        <p class="sub">Marca todo lo que aplique. Luego haz clic en <b>Diagnosticar</b>.</p>
-        <form id="symForm">
-          <fieldset id="symptoms"></fieldset>
-          <div class="toolbar">
-            <button type="button" id="btnDiagnose">Diagnosticar</button>
-            <button type="button" class="secondary" id="btnLimpiar">Limpiar</button>
-            <button type="button" class="ghost" id="btnExport">Exportar caso</button>
+    <!-- Modal de Autenticación -->
+    <div id="authModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="authTitle">Iniciar sesión</h2>
+          <button type="button" class="close-btn" id="btnCloseAuth">&times;</button>
+        </div>
+        <form id="authForm">
+          <input type="email" id="authEmail" placeholder="Email" required />
+          <input type="password" id="authPassword" placeholder="Contraseña" required />
+          <input type="text" id="authName" placeholder="Nombre completo" style="display:none" />
+          <div id="authError" class="error" style="display:none"></div>
+          <div class="modal-buttons">
+            <button type="submit" id="btnAuthSubmit">Iniciar sesión</button>
           </div>
+          <p id="toggleAuthMode" class="text-center muted" style="margin-top:12px;cursor:pointer">
+            ¿No tienes cuenta? <span style="color:#3b82f6">Regístrate aquí</span>
+          </p>
         </form>
       </div>
-    </section>
+    </div>
 
-    <section class="card">
-      <div class="body">
-        <h2>2) Resultados</h2>
-        <p class="sub">El motor de inferencia pondera reglas por coincidencia y certeza. Explicaciones incluidas.</p>
-        <div id="results" class="result">
-          <div class="muted">Sin diagnóstico aún.</div>
-        </div>
-      </div>
-    </section>
+    <!-- Panel de usuario/admin -->
+    <div id="userPanel" class="user-panel hidden">
+      <span id="userInfo"></span>
+      <button type="button" id="btnLogout" class="btn-small-ghost">Cerrar sesión</button>
+    </div>
 
-    <section class="card" style="grid-column: 1 / -1;">
+    <!-- Panel de Admin -->
+    <div id="adminPanel" class="card hidden" style="margin: 24px; margin-bottom: 0;">
       <div class="body">
-        <h2>Base de conocimientos</h2>
-        <p class="sub">Reglas declarativas en JSON.</p>
-        <details>
-          <summary>Ver/ocultar reglas</summary>
-          <pre id="kbPre" class="muted" style="white-space:pre-wrap"></pre>
-        </details>
-        <h2 style="margin-top:20px">Notas</h2>
-        <div class="kv">
-          <div class="muted">Estrategia</div>
-          <div>Encadenamiento <b>hacia adelante</b> (data-driven) con coincidencia parcial y factores de certeza.</div>
-          <div class="muted">Explicaciones</div>
-          <div>Se listan condiciones que activaron cada hipótesis y recomendaciones de mantenimiento.</div>
-          <div class="muted">Persistencia</div>
-          <div>Exporta cada caso en JSON para retroalimentación futura.</div>
-        </div>
+        <h2>🔧 Panel de Administrador</h2>
+        <p class="sub">Crear y gestionar reglas diagnósticas</p>
+        <form id="adminRuleForm">
+          <input type="text" id="adminRuleId" placeholder="ID de Regla (ej: F19)" required />
+          <textarea id="adminRuleFault" placeholder="Falla/Diagnóstico" required></textarea>
+          <input type="number" id="adminRuleWeight" placeholder="Peso (0-1)" min="0" max="1" step="0.1" value="0.7" />
+          <input type="text" id="adminRuleConditions" placeholder="Condiciones (separadas por comas)" />
+          <textarea id="adminRuleAdvice" placeholder="Recomendaciones (una por línea)"></textarea>
+          <div id="adminError" class="error" style="display:none"></div>
+          <button type="submit">Crear Regla</button>
+        </form>
       </div>
-      <div class="footer">© Proyecto académico – UMB. Motor y UI en JavaScript sin librerías.</div>
-    </section>
+    </div>
+
+    <div id="mainContent">
   </main>
 
   <script>
   /* ===============================
      Frontend – Sistema Experto (JS)
+     Con soporte para Auth y Admin
      =============================== */
 
-  const API_BASE = "http://localhost:4000";
+  // Detecta si es producción o desarrollo
+  const API_BASE = window.location.hostname === 'localhost' 
+    ? "http://localhost:4000"
+    : window.location.origin.replace(/^https/, 'https').replace(/diagnostic-app/, 'diagnostic-api');
+  let currentUser = null;
+  let authMode = 'login'; // 'login' o 'register'
 
   // 1) Catálogo de síntomas
   const SYMPTOMS = [
@@ -134,11 +144,79 @@
   }
 
   // 3) Render UI
-  const $symptoms = document.getElementById('symptoms');
+  const $mainContent = document.getElementById('mainContent');
   const $results  = document.getElementById('results');
   const $kbPre    = document.getElementById('kbPre');
+  const $modal    = document.getElementById('authModal');
+  const $userPanel = document.getElementById('userPanel');
+  const $adminPanel = document.getElementById('adminPanel');
+
+  function renderMainContent() {
+    if (!currentUser) return;
+    
+    $mainContent.innerHTML = `
+      <div class="body">
+        <h2>1) Selecciona los síntomas observados</h2>
+        <p class="sub">Marca todo lo que aplique. Luego haz clic en <b>Diagnosticar</b>.</p>
+        <form id="symForm">
+          <fieldset id="symptoms"></fieldset>
+          <div class="toolbar">
+            <button type="button" id="btnDiagnose">Diagnosticar</button>
+            <button type="button" class="secondary" id="btnLimpiar">Limpiar</button>
+            <button type="button" class="ghost" id="btnExport">Exportar caso</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const resultsCard = `
+      <section class="card">
+        <div class="body">
+          <h2>2) Resultados</h2>
+          <p class="sub">El motor de inferencia pondera reglas por coincidencia y certeza. Explicaciones incluidas.</p>
+          <div id="results" class="result">
+            <div class="muted">Sin diagnóstico aún.</div>
+          </div>
+        </div>
+      </section>
+    `;
+
+    const kbCard = `
+      <section class="card" style="grid-column: 1 / -1;">
+        <div class="body">
+          <h2>Base de conocimientos</h2>
+          <p class="sub">Reglas declarativas en JSON.</p>
+          <details>
+            <summary>Ver/ocultar reglas</summary>
+            <pre id="kbPre" class="muted" style="white-space:pre-wrap"></pre>
+          </details>
+          <h2 style="margin-top:20px">Notas</h2>
+          <div class="kv">
+            <div class="muted">Estrategia</div>
+            <div>Encadenamiento <b>hacia adelante</b> (data-driven) con coincidencia parcial y factores de certeza.</div>
+            <div class="muted">Explicaciones</div>
+            <div>Se listan condiciones que activaron cada hipótesis y recomendaciones de mantenimiento.</div>
+            <div class="muted">Persistencia</div>
+            <div>Exporta cada caso en JSON para retroalimentación futura.</div>
+          </div>
+        </div>
+        <div class="footer">© Proyecto académico – UMB. Motor y UI en JavaScript sin librerías.</div>
+      </section>
+    `;
+
+    document.querySelector('main').innerHTML = 
+      ($adminPanel.classList.contains('hidden') ? '' : $adminPanel.outerHTML) +
+      resultsCard +
+      kbCard;
+
+    renderSymptoms();
+    setupEventListeners();
+  }
 
   function renderSymptoms() {
+    const $symptoms = document.getElementById('symptoms');
+    if (!$symptoms) return;
+    
     $symptoms.innerHTML = '';
     SYMPTOMS.forEach(s => {
       const el = document.createElement('label');
@@ -150,13 +228,16 @@
 
   function getSelected() {
     const set = new Set();
-    $symptoms.querySelectorAll('input[type="checkbox"]').forEach(b => {
+    document.querySelectorAll('input[type="checkbox"][data-sym]').forEach(b => {
       if (b.checked) set.add(b.dataset.sym);
     });
     return set;
   }
 
   function renderResults(list, selected) {
+    const $results = document.getElementById('results');
+    if (!$results) return;
+    
     if (!list.length) {
       $results.innerHTML = `<div class="muted">No hay hipótesis suficientes con los hechos actuales.</div>`;
       return;
@@ -185,10 +266,45 @@
     });
   }
 
+  function setupEventListeners() {
+    const $btnDiagnose = document.getElementById('btnDiagnose');
+    const $btnLimpiar = document.getElementById('btnLimpiar');
+    const $btnExport = document.getElementById('btnExport');
+
+    if ($btnDiagnose) {
+      $btnDiagnose.addEventListener('click', () => {
+        const sel = getSelected();
+        const res = diagnose(sel);
+        renderResults(res, sel);
+        saveCaseToAPI(sel, res);
+      });
+    }
+
+    if ($btnLimpiar) {
+      $btnLimpiar.addEventListener('click', () => {
+        document.querySelectorAll('input[type="checkbox"][data-sym]').forEach(b => b.checked = false);
+        const $results = document.getElementById('results');
+        if ($results) $results.innerHTML = '<div class="muted">Sin diagnóstico aún.</div>';
+      });
+    }
+
+    if ($btnExport) {
+      $btnExport.addEventListener('click', () => {
+        const sel = getSelected();
+        const res = diagnose(sel);
+        const payload = { timestamp: new Date().toISOString(), selected: Array.from(sel), results: res };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `caso_dx_${Date.now()}.json`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+    }
+  }
+
   // 4) API calls
   async function loadRulesFromAPI() {
     try {
-      $kbPre.textContent = "Cargando reglas desde Mongo…";
+      if ($kbPre) $kbPre.textContent = "Cargando reglas…";
       const res = await fetch(`${API_BASE}/api/rules?t=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const rulesFromDb = await res.json();
@@ -198,14 +314,15 @@
         weight: r.weight ?? 0.7,
         then: { fault: r.fault, advice: r.advice || [] }
       }));
-      $kbPre.textContent = JSON.stringify(KB, null, 2);
+      if ($kbPre) $kbPre.textContent = JSON.stringify(KB, null, 2);
       console.log("KB cargada:", KB.length);
     } catch (e) {
-      $kbPre.textContent = `No se pudieron cargar las reglas: ${e.message}`;
+      if ($kbPre) $kbPre.textContent = `No se pudieron cargar las reglas: ${e.message}`;
     }
   }
 
   async function saveCaseToAPI(selected, results) {
+    if (!currentUser) return;
     try {
       const payload = {
         timestamp: new Date().toISOString(),
@@ -221,6 +338,7 @@
       const res = await fetch(`${API_BASE}/api/cases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -230,32 +348,198 @@
     }
   }
 
-  // 5) Eventos
-  document.getElementById('btnDiagnose').addEventListener('click', () => {
-    const sel = getSelected();
-    const res = diagnose(sel);
-    renderResults(res, sel);
-    saveCaseToAPI(sel, res);
+  // 5) Auth functions
+  async function login(email, password) {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al iniciar sesión");
+      
+      currentUser = data.user;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      updateUI();
+      $modal.classList.add('hidden');
+      renderMainContent();
+      loadRulesFromAPI();
+    } catch (e) {
+      showAuthError(e.message);
+    }
+  }
+
+  async function register(email, name, password) {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, name, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al registrarse");
+      
+      currentUser = data.user;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+      updateUI();
+      $modal.classList.add('hidden');
+      renderMainContent();
+      loadRulesFromAPI();
+    } catch (e) {
+      showAuthError(e.message);
+    }
+  }
+
+  async function logout() {
+    try {
+      await fetch(`${API_BASE}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include"
+      });
+      currentUser = null;
+      localStorage.removeItem('user');
+      updateUI();
+      $modal.classList.remove('hidden');
+    } catch (e) {
+      console.error("Error al cerrar sesión:", e);
+    }
+  }
+
+  function updateUI() {
+    if (currentUser) {
+      $userPanel.classList.remove('hidden');
+      document.getElementById('userInfo').textContent = `${currentUser.name || currentUser.email}${currentUser.role === 'admin' ? ' (👨‍💼 Admin)' : ''}`;
+      document.getElementById('btnToggleAuth').style.display = 'none';
+      
+      if (currentUser.role === 'admin') {
+        $adminPanel.classList.remove('hidden');
+      } else {
+        $adminPanel.classList.add('hidden');
+      }
+    } else {
+      $userPanel.classList.add('hidden');
+      document.getElementById('btnToggleAuth').style.display = 'block';
+      $adminPanel.classList.add('hidden');
+    }
+  }
+
+  function showAuthError(msg) {
+    const $err = document.getElementById('authError');
+    if ($err) {
+      $err.textContent = msg;
+      $err.style.display = 'block';
+    }
+  }
+
+  // 6) Admin functions
+  async function createRule(ruleId, conditions, weight, fault, advice) {
+    if (!currentUser || currentUser.role !== 'admin') {
+      showAdminError("No autorizado");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/rules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ruleId,
+          conditions: conditions.split(',').map(s => s.trim()).filter(Boolean),
+          weight: parseFloat(weight) || 0.7,
+          fault,
+          advice: advice.split('\n').map(s => s.trim()).filter(Boolean)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al crear regla");
+      
+      alert("✅ Regla creada correctamente");
+      document.getElementById('adminRuleForm').reset();
+      loadRulesFromAPI();
+      renderResults(diagnose(getSelected()), getSelected());
+    } catch (e) {
+      showAdminError(e.message);
+    }
+  }
+
+  function showAdminError(msg) {
+    const $err = document.getElementById('adminError');
+    if ($err) {
+      $err.textContent = msg;
+      $err.style.display = 'block';
+      setTimeout(() => { $err.style.display = 'none'; }, 5000);
+    }
+  }
+
+  // 7) Event listeners
+  document.getElementById('btnToggleAuth').addEventListener('click', () => {
+    authMode = 'login';
+    document.getElementById('authTitle').textContent = 'Iniciar sesión';
+    document.getElementById('authName').style.display = 'none';
+    document.getElementById('authPassword').value = '';
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authError').style.display = 'none';
+    $modal.classList.remove('hidden');
   });
 
-  document.getElementById('btnLimpiar').addEventListener('click', () => {
-    $symptoms.querySelectorAll('input[type="checkbox"]').forEach(b => b.checked = false);
-    $results.innerHTML = '<div class="muted">Sin diagnóstico aún.</div>';
+  document.getElementById('btnCloseAuth').addEventListener('click', () => {
+    $modal.classList.add('hidden');
   });
 
-  document.getElementById('btnExport').addEventListener('click', () => {
-    const sel = getSelected();
-    const res = diagnose(sel);
-    const payload = { timestamp: new Date().toISOString(), selected: Array.from(sel), results: res };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `caso_dx_${Date.now()}.json`;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  document.getElementById('toggleAuthMode').addEventListener('click', () => {
+    authMode = authMode === 'login' ? 'register' : 'login';
+    document.getElementById('authTitle').textContent = authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+    document.getElementById('authName').style.display = authMode === 'register' ? 'block' : 'none';
+    document.getElementById('authError').style.display = 'none';
   });
 
-  // 6) Init
-  renderSymptoms();
-  loadRulesFromAPI();
+  document.getElementById('authForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (authMode === 'login') {
+      login(email, password);
+    } else {
+      const name = document.getElementById('authName').value;
+      register(email, name, password);
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', logout);
+
+  document.getElementById('adminRuleForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    createRule(
+      document.getElementById('adminRuleId').value,
+      document.getElementById('adminRuleConditions').value,
+      document.getElementById('adminRuleWeight').value,
+      document.getElementById('adminRuleFault').value,
+      document.getElementById('adminRuleAdvice').value
+    );
+  });
+
+  // 8) Init
+  const saved = localStorage.getItem('user');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      updateUI();
+      renderMainContent();
+      loadRulesFromAPI();
+    } catch (e) {
+      console.error("Error al cargar usuario:", e);
+      currentUser = null;
+    }
+  }
+
+  if (!currentUser) {
+    $modal.classList.remove('hidden');
+  }
   </script>
 </body>
 </html>

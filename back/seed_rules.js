@@ -1,8 +1,8 @@
 // back/seed_rules.js
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
+import sequelize from "./db.js";
 import Rule from "./models/Rule.js";
 
 dotenv.config();
@@ -211,70 +211,72 @@ function walk(node, currentQ, pathConds, outRules, ctx) {
 
 /* ===== pipeline ===== */
 (async () => {
-  await mongoose.connect(process.env.MONGODB_URI, { dbName: "expertos" });
-  console.log("Conectado a Mongo. Transformando reglas…");
+  try {
+    await sequelize.authenticate();
+    console.log("PostgreSQL conectado. Transformando reglas…");
 
-  const input = JSON.parse(fs.readFileSync(filePath, "utf8"));
-  const top = keys(input);
-  if (top.length !== 1) {
-    console.error("Claves nivel 1:", top);
-    throw new Error("Se esperaba un objeto con una sola pregunta raíz.");
-  }
+    const input = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const top = keys(input);
+    if (top.length !== 1) {
+      console.error("Claves nivel 1:", top);
+      throw new Error("Se esperaba un objeto con una sola pregunta raíz.");
+    }
 
-  const rootQ = top[0];
-  const subtree = input[rootQ];
+    const rootQ = top[0];
+    const subtree = input[rootQ];
 
-  const rules = [];
-  const ctx = { autoId: 1 };
+    const rules = [];
+    const ctx = { autoId: 1 };
 
-  if (isArr(subtree)) {
-    // ejemplo real: un array cuyo primer elemento tenía { "NO": [...], "SI": [...] }
-    for (const entry of subtree) {
-      if (isObj(entry)) {
-        for (const k of keys(entry)) {
-          const child = entry[k];
-          if (isQuestionKey(k)) {
-            // en raro caso que viniera como { "¿Otra?": [...] } al nivel raíz
-            walk(child, k, [], rules, ctx);
-          } else {
-            // Respuesta directa a la raíz
-            const ans = normalizeAnswer(k);
-            const cond = conditionFor(rootQ, ans);
-            walk(child, rootQ, [cond], rules, ctx);
+    if (isArr(subtree)) {
+      // ejemplo real: un array cuyo primer elemento tenía { "NO": [...], "SI": [...] }
+      for (const entry of subtree) {
+        if (isObj(entry)) {
+          for (const k of keys(entry)) {
+            const child = entry[k];
+            if (isQuestionKey(k)) {
+              // en raro caso que viniera como { "¿Otra?": [...] } al nivel raíz
+              walk(child, k, [], rules, ctx);
+            } else {
+              // Respuesta directa a la raíz
+              const ans = normalizeAnswer(k);
+              const cond = conditionFor(rootQ, ans);
+              walk(child, rootQ, [cond], rules, ctx);
+            }
           }
+        } else {
+          walk(entry, rootQ, [], rules, ctx);
         }
+      }
+    } else {
+      // raíz como objeto o string
+      if (isQuestionKey(rootQ)) {
+        walk(subtree, rootQ, [], rules, ctx);
       } else {
-        walk(entry, rootQ, [], rules, ctx);
+        walk(subtree, null, [], rules, ctx);
       }
     }
-  } else {
-    // raíz como objeto o string
-    if (isQuestionKey(rootQ)) {
-      walk(subtree, rootQ, [], rules, ctx);
-    } else {
-      walk(subtree, null, [], rules, ctx);
-    }
-  }
 
-  if (!rules.length) {
-    console.error("DEBUG: no se generaron reglas. Revisa el archivo; imprime 2 niveles:");
-    console.error("RootQ:", rootQ);
-    console.error("Tipo subtree:", Array.isArray(subtree) ? "array" : typeof subtree);
-    console.error("Primer elemento:", Array.isArray(subtree) ? JSON.stringify(subtree[0], null, 2) : JSON.stringify(subtree, null, 2));
+    if (!rules.length) {
+      console.error("DEBUG: no se generaron reglas. Revisa el archivo; imprime 2 niveles:");
+      console.error("RootQ:", rootQ);
+      console.error("Tipo subtree:", Array.isArray(subtree) ? "array" : typeof subtree);
+      console.error("Primer elemento:", Array.isArray(subtree) ? JSON.stringify(subtree[0], null, 2) : JSON.stringify(subtree, null, 2));
+      process.exit(1);
+    }
+
+    const allConds = Array.from(new Set(rules.flatMap(r => r.conditions)));
+    console.log("Condiciones detectadas (ajusta MAP para IDs finales del front):");
+    console.log(allConds.slice(0, 60));
+
+    await Rule.destroy({ where: {} });
+    await Rule.bulkCreate(rules);
+
+    console.log(`Seed OK: ${rules.length} reglas insertadas`);
+    await sequelize.close();
+    process.exit(0);
+  } catch (err) {
+    console.error(err);
     process.exit(1);
   }
-
-  const allConds = Array.from(new Set(rules.flatMap(r => r.conditions)));
-  console.log("Condiciones detectadas (ajusta MAP para IDs finales del front):");
-  console.log(allConds.slice(0, 60));
-
-  await Rule.deleteMany({});
-  await Rule.insertMany(rules, { ordered: false });
-
-  console.log(`Seed OK: ${rules.length} reglas insertadas`);
-  await mongoose.disconnect();
-  process.exit(0);
-})().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+})();

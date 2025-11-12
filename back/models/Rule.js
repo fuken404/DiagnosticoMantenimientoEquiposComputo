@@ -1,14 +1,44 @@
-import mongoose from "mongoose";
+import { DataTypes } from "sequelize";
+import sequelize from "../db.js";
 
-const RuleSchema = new mongoose.Schema(
+const Rule = sequelize.define(
+  "Rule",
   {
-    ruleId: { type: String, unique: true, required: true }, // F01..F25
-    conditions: { type: [String], default: [] },
-    weight: { type: Number, min: 0, max: 1, default: 0.7 },
-    fault: { type: String, required: true },
-    advice: { type: [String], default: [] }
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    ruleId: {
+      type: DataTypes.STRING,
+      unique: true,
+      allowNull: false,
+    },
+    conditions: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      defaultValue: [],
+    },
+    weight: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0.7,
+      validate: {
+        min: 0,
+        max: 1,
+      },
+    },
+    fault: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    advice: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      defaultValue: [],
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    underscored: true,
+  }
 );
 
-export default mongoose.model("Rule", RuleSchema);
+export default Rule;
