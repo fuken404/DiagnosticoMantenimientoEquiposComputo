@@ -76,7 +76,7 @@
   // Detecta si es producción o desarrollo
   const API_BASE = window.location.hostname === 'localhost' 
     ? "http://localhost:4000"
-    : window.location.origin.replace(/^https/, 'https').replace(/diagnostic-app/, 'diagnostic-api');
+    : "https://diagnostic-api.onrender.com";
   let currentUser = null;
   let authMode = 'login'; // 'login' o 'register'
 
