@@ -351,44 +351,54 @@
   // 5) Auth functions
   async function login(email, password) {
     try {
+      console.log('🔓 Login attempt:', { email, API_BASE });
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email, password })
       });
+      console.log('🔓 Login response status:', res.status);
       const data = await res.json();
+      console.log('🔓 Login response data:', data);
       if (!res.ok) throw new Error(data.error || "Error al iniciar sesión");
       
       currentUser = data.user;
       localStorage.setItem('user', JSON.stringify(currentUser));
+      console.log('✅ Login exitoso:', currentUser);
       updateUI();
       $modal.classList.add('hidden');
       renderMainContent();
       loadRulesFromAPI();
     } catch (e) {
+      console.error('❌ Login error:', e);
       showAuthError(e.message);
     }
   }
 
   async function register(email, name, password) {
     try {
+      console.log('📝 Register attempt:', { email, name, API_BASE });
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email, name, password })
       });
+      console.log('📝 Register response status:', res.status);
       const data = await res.json();
+      console.log('📝 Register response data:', data);
       if (!res.ok) throw new Error(data.error || "Error al registrarse");
       
       currentUser = data.user;
       localStorage.setItem('user', JSON.stringify(currentUser));
+      console.log('✅ Register exitoso:', currentUser);
       updateUI();
       $modal.classList.add('hidden');
       renderMainContent();
       loadRulesFromAPI();
     } catch (e) {
+      console.error('❌ Register error:', e);
       showAuthError(e.message);
     }
   }
@@ -499,13 +509,16 @@
 
   document.getElementById('authForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    console.log('📋 Form submitted, authMode:', authMode);
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
     
     if (authMode === 'login') {
+      console.log('🔓 Calling login()');
       login(email, password);
     } else {
       const name = document.getElementById('authName').value;
+      console.log('📝 Calling register()');
       register(email, name, password);
     }
   });
