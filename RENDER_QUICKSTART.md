@@ -69,7 +69,7 @@ git push -u origin main
 2. Configura:
    - **Name:** `diagnostic-db`
    - **Database:** `expertos`
-   - **User:** `postgres`
+   - **User:** `diaguser` ⚠️ (NO usar `postgres` - Render lo rechaza)
    - **Plan:** Free
    - **Region:** Selecciona cercano a ti (ej: Ohio, Frankfurt, Singapur)
 
@@ -81,7 +81,14 @@ git push -u origin main
 
 ```
 Internal Database URL:
-postgresql://postgres:PASSWORDAQUI@nombre-algo-random.c.rendering.com:5432/expertos
+postgresql://diaguser:PASSWORDAQUI@nombre-algo-random.c.rendering.com:5432/expertos
+
+Datos individuales:
+- Host: nombre-algo-random.c.rendering.com
+- Port: 5432
+- Database: expertos
+- User: diaguser
+- Password: (el que Render genera automáticamente)
 ```
 
 (Los necesitarás en el siguiente paso)
@@ -118,15 +125,20 @@ PORT=3000
 JWT_SECRET=genera_una_clave_segura_aqui_minimo_32_caracteres
 ```
 
-6. **Copia la URL interna de la BD del paso anterior y agrega:**
+6. **Copia las credenciales de PostgreSQL del paso anterior y agrega:**
 
 ```
 DB_HOST=nombre-aleatorio.c.rendering.com
 DB_PORT=5432
 DB_NAME=expertos
-DB_USER=postgres
-DB_PASSWORD=TU_PASSWORD_AQUI
+DB_USER=diaguser
+DB_PASSWORD=TU_PASSWORD_QUE_RENDER_GENERO
 ```
+
+✅ **IMPORTANTE:** Asegúrate de que:
+- `DB_USER` es `diaguser` (el que creaste en Paso 3)
+- `DB_PASSWORD` es el password que Render generó automáticamente
+- `DB_HOST` es el host interno de Render
 
 7. Click **"Create Web Service"**
 
@@ -196,6 +208,30 @@ CORS_ORIGIN=https://diagnostic-app.onrender.com
 
 ## 🆘 Si Algo No Funciona
 
+### "Error: user must not be one of the following values: postgres"
+
+**ESTO ES NORMAL EN RENDER** ⚠️
+
+Render no permite usar `postgres` como usuario. 
+
+**Solución:**
+```
+En Paso 3, usa: diaguser (o cualquier otro nombre)
+NO uses: postgres
+```
+
+Si ya lo hiciste:
+1. Elimina la BD anterior
+2. Crea una nueva con `diaguser` en vez de `postgres`
+3. Actualiza las variables en Backend:
+   ```
+   DB_USER=diaguser
+   DB_PASSWORD=(el password que Render generó)
+   ```
+4. Redeploy el backend
+
+---
+
 ### "Veo error de conexión a BD"
 
 ```
@@ -204,8 +240,9 @@ Busca: "PostgreSQL conectado"
 
 Si NO aparece:
 1. Verifica DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
-2. Verifica que la BD esté en estado "Available"
-3. Haz click en "Manual Deploy" para reintentar
+2. ✅ Especialmente verifica que DB_USER sea "diaguser"
+3. Verifica que la BD esté en estado "Available"
+4. Haz click en "Manual Deploy" para reintentar
 ```
 
 ### "El frontend no se conecta al backend"
