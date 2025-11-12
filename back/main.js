@@ -47,6 +47,59 @@ app.options("*", cors(corsOpts)); // preflight global
 /* ---------- Health ---------- */
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
+/* ---------- Seed Rules (carga la base de conocimientos) ---------- */
+app.post("/api/seed", async (_req, res) => {
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    
+    const filePath = path.resolve(process.cwd(), "Arbol de Decision.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    
+    // Limpia las reglas existentes
+    await Rule.destroy({ where: {} });
+    
+    // Aquí extraemos las reglas del JSON (simplificado)
+    // En producción, importarías la lógica de seed_rules.js
+    const rules = [];
+    const extractRules = (node, conds = []) => {
+      if (typeof node === "string") {
+        const m = node.match(/F(\d{2,})/i);
+        const ruleId = m ? `F${m[1]}` : `F${String(rules.length + 1).padStart(2, "0")}`;
+        rules.push({
+          ruleId,
+          fault: node.trim(),
+          conditions: conds,
+          weight: 0.8,
+          advice: []
+        });
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.forEach(item => extractRules(item, conds));
+        return;
+      }
+      if (node && typeof node === "object") {
+        Object.entries(node).forEach(([key, val]) => {
+          extractRules(val, conds);
+        });
+      }
+    };
+    
+    extractRules(data);
+    
+    if (rules.length === 0) {
+      return res.status(400).json({ error: "No se pudieron extraer reglas del archivo" });
+    }
+    
+    await Rule.bulkCreate(rules);
+    res.json({ ok: true, inserted: rules.length });
+  } catch (err) {
+    console.error("Seed error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ---------- Auth (rate-limited) ---------- */
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 });
 app.use("/api/auth", authLimiter, authRouter);
