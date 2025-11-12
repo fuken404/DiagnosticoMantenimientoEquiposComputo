@@ -33,6 +33,8 @@ const ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5500,http://127.0.
   .split(",")
   .map(s => s.trim());
 
+console.log("🔐 CORS_ORIGIN configurado:", ORIGINS);
+
 const corsOpts = {
   origin: ORIGINS,
   credentials: true, // ← permite cookies
