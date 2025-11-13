@@ -22,15 +22,17 @@ function setAuthCookie(res, token) {
 
 // POST /api/auth/register
 router.post("/register", async (req, res) => {
-  const { email, name, password } = req.body || {};
+  const { email, name, password, role } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: "email y password son requeridos" });
 
   // políticas simples de password
   if (password.length < 8) return res.status(400).json({ error: "Password mínimo 8 caracteres" });
 
+  const normalizedRole = (typeof role === "string" && role.toLowerCase() === "admin") ? "admin" : "user";
+
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id }); // sal y parámetros seguros
   try {
-    const user = await User.create({ email, name, passwordHash, role: 'user' });
+    const user = await User.create({ email, name, passwordHash, role: normalizedRole });
     const token = sign({ sub: user.id, email: user.email, name: user.name, role: user.role });
     setAuthCookie(res, token);
     res.status(201).json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });

@@ -22,6 +22,10 @@
       <input id="name" type="text" placeholder="Nombre" required />
       <input id="email" type="email" placeholder="Correo electrónico" required />
       <input id="password" type="password" placeholder="Contraseña" required minlength="8" />
+      <select id="role" required style="width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #475569;background:#0f172a;color:#fff;">
+        <option value="user">Usuario</option>
+        <option value="admin">Administrador</option>
+      </select>
       <button type="submit" class="primary">Registrarse</button>
       <a href="./index.html">Ya tengo cuenta</a>
     </form>
@@ -31,12 +35,12 @@
     const API_BASE = window.location.hostname === 'localhost'
       ? "http://localhost:4000"
       : "https://diagnostic-api-ppg9.onrender.com";
-    async function register(email, password, name) {
+    async function register(email, password, name, role) {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password, name })
+        body: JSON.stringify({ email, password, name, role })
       });
       if (!res.ok) throw new Error((await res.json()).error || "Error en registro");
       return res.json();
@@ -48,7 +52,8 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
       try {
-        await register(email, password, name);
+        const role = document.getElementById("role").value;
+        await register(email, password, name, role);
         alert("✅ Usuario creado correctamente. Ahora puedes iniciar sesión.");
         window.location.href = "./index.html";
       } catch (err) {
