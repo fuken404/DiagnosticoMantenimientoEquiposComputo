@@ -81,14 +81,13 @@ git push -u origin main
 
 ```
 Internal Database URL:
-postgresql://diaguser:PASSWORDAQUI@nombre-algo-random.c.rendering.com:5432/expertos
-
+postgresql://diaguser:yranPi6hNSxv0F4oEh9Kj7TXByFg3v4u@dpg-d4a079idbo4c73c2c0jg-a/expertos
 Datos individuales:
-- Host: nombre-algo-random.c.rendering.com
+- Host: dpg-d4a079idbo4c73c2c0jg-a
 - Port: 5432
 - Database: expertos
 - User: diaguser
-- Password: (el que Render genera automáticamente)
+- Password: yranPi6hNSxv0F4oEh9Kj7TXByFg3v4u
 ```
 
 (Los necesitarás en el siguiente paso)
@@ -147,7 +146,7 @@ DB_PASSWORD=TU_PASSWORD_QUE_RENDER_GENERO
 9. Verás algo como: `diagnostic-api.onrender.com` (copia esta URL)
 
 ---
-
+  
 ## 🎯 Paso 5: Crear Frontend en Render (2 minutos)
 
 1. Click **"New"** → **"Static Site"**
