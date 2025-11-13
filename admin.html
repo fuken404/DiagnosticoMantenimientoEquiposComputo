@@ -192,15 +192,7 @@
     }
 
     function diagnose(selected) {
-      const $results = document.getElementById('results');
-      if (!KB.length) {
-        if ($results) $results.innerHTML = `<div class="muted">⚠️ No hay reglas cargadas.</div>`;
-        return [];
-      }
-      if (!selected.size) {
-        if ($results) $results.innerHTML = `<div class="muted">Selecciona al menos un síntoma para iniciar.</div>`;
-        return [];
-      }
+      if (!KB.length || !selected.size) return [];
       return KB.map(rule => {
         const total = rule.if.length || 1;
         const hit = rule.if.filter(x => selected.has(x)).length;
@@ -214,44 +206,56 @@
     function renderResults(list, selected) {
       const container = document.getElementById('results');
       if (!container) return;
-      if (!list.length) {
-        if (!selected.size) {
-          container.innerHTML = `<div class="muted">Selecciona al menos un síntoma para obtener diagnósticos.</div>`;
-          return;
-        }
-        const fallback = KB.slice(0, 5).map(rule => ({
-          id: rule.id,
-          fault: rule.then.fault,
-          advice: rule.then.advice || [],
-          matched: 0,
-          total: rule.if.length || 1,
-          weight: rule.weight ?? 0.7,
-          score: 0
-        }));
-        container.innerHTML = `<div class="muted">Sin coincidencias directas. Mostrando recomendaciones generales.</div>`;
-        fallback.forEach((r, i) => {
-          const percent = Math.round(r.score * 100);
-          const explainConds = (KB.find(k => k.id === r.id)?.if || []).map(id => ({
-            label: SYMPTOMS.find(s => s.id === id)?.label || id,
-            ok: selected.has(id)
-          }));
-          const item = document.createElement('div');
-          item.className = 'item';
-          item.innerHTML = `
-            <div class="row" style="justify-content:space-between;align-items:center">
-              <h3>${i + 1}. ${r.fault}</h3>
-              <span class="badge">Score: ${percent}%</span>
-            </div>
-            <div class="bar"><div class="fill" style="width:${percent}%"></div></div>
-            <div class="explain">Coincidencias: ${r.matched}/${r.total} · Peso: ${Math.round(r.weight * 100)}%</div>
-            <ul class="explain">${explainConds.map(c => `<li>${c.ok ? "✅" : "▫️"} ${c.label}</li>`).join('')}</ul>
-            <div class="muted" style="margin:6px 0 4px">Recomendaciones:</div>
-            <ul>${(r.advice || []).map(a => `<li>${a}</li>`).join('')}</ul>
-          `;
-          container.appendChild(item);
-        });
+      if (!KB.length) {
+        container.innerHTML = `<div class="muted">⚠️ No hay reglas cargadas. Recarga la base de conocimientos.</div>`;
         return;
       }
+      if (!selected.size) {
+        container.innerHTML = `<div class="muted">Selecciona al menos un síntoma para obtener diagnósticos.</div>`;
+        return;
+      }
+
+      let data = list;
+      let notice = "";
+      if (!data.length) {
+        notice = "Sin coincidencias directas. Mostrando recomendaciones generales.";
+        data = KB.slice(0, 5).map(rule => {
+          const total = rule.if.length || 1;
+          const hit = rule.if.filter(x => selected.has(x)).length;
+          const score = (hit / total) * (rule.weight ?? 0.7);
+          return { id: rule.id, fault: rule.then.fault, advice: rule.then.advice || [], matched: hit, total, weight: rule.weight ?? 0.7, score };
+        });
+      }
+
+      container.innerHTML = "";
+      if (notice) {
+        const msg = document.createElement('div');
+        msg.className = 'muted';
+        msg.textContent = notice;
+        container.appendChild(msg);
+      }
+
+      data.forEach((r, i) => {
+        const percent = Math.round(r.score * 100);
+        const explainConds = (KB.find(k => k.id === r.id)?.if || []).map(id => ({
+          label: SYMPTOMS.find(s => s.id === id)?.label || id,
+          ok: selected.has(id)
+        }));
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.innerHTML = `
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <h3>${i + 1}. ${r.fault}</h3>
+            <span class="badge">Score: ${percent}%</span>
+          </div>
+          <div class="bar"><div class="fill" style="width:${percent}%"></div></div>
+          <div class="explain">Coincidencias: ${r.matched}/${r.total} · Peso: ${Math.round(r.weight * 100)}%</div>
+          <ul class="explain">${explainConds.map(c => `<li>${c.ok ? "✅" : "▫️"} ${c.label}</li>`).join('')}</ul>
+          <div class="muted" style="margin:6px 0 4px">Recomendaciones:</div>
+          <ul>${(r.advice || []).map(a => `<li>${a}</li>`).join('')}</ul>
+        `;
+        container.appendChild(item);
+      });
       container.innerHTML = '';
       list.forEach((r, i) => {
         const percent = Math.round(r.score * 100);
