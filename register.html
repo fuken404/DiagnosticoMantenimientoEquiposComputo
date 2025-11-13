@@ -23,12 +23,14 @@
       <input id="email" type="email" placeholder="Correo electrónico" required />
       <input id="password" type="password" placeholder="Contraseña" required minlength="8" />
       <button type="submit" class="primary">Registrarse</button>
-      <a href="./login.html">Ya tengo cuenta</a>
+      <a href="./index.html">Ya tengo cuenta</a>
     </form>
   </div>
 
   <script>
-    const API_BASE = "http://localhost:4000";
+    const API_BASE = window.location.hostname === 'localhost'
+      ? "http://localhost:4000"
+      : "https://diagnostic-api-ppg9.onrender.com";
     async function register(email, password, name) {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
@@ -48,7 +50,7 @@
       try {
         await register(email, password, name);
         alert("✅ Usuario creado correctamente. Ahora puedes iniciar sesión.");
-        window.location.href = "./login.html";
+        window.location.href = "./index.html";
       } catch (err) {
         alert("❌ " + err.message);
       }

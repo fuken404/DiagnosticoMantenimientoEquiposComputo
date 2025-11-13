@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel de Usuario · Sistema Experto Hardware</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" stroke="#64748b" stroke-width="1.5"/>
+        <path d="M8 9h8M8 13h6M8 17h4" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Sistema experto · Diagnóstico de hardware</h1>
+        <p class="muted">Vista de usuario</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userInfo" class="muted"></span>
+      <button type="button" id="btnLogout" class="btn-small-ghost">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="body">
+        <h2>1) Selecciona los síntomas observados</h2>
+        <p class="sub">Marca todo lo que aplique y luego haz clic en Diagnosticar.</p>
+        <form id="symForm">
+          <fieldset id="symptoms"></fieldset>
+          <div class="toolbar">
+            <button type="button" id="btnDiagnose">Diagnosticar</button>
+            <button type="button" id="btnLimpiar" class="secondary">Limpiar</button>
+            <button type="button" id="btnExport" class="ghost">Exportar caso</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="body">
+        <h2>2) Resultados</h2>
+        <p class="sub">El motor pondera las reglas por coincidencia y certeza.</p>
+        <div id="results" class="result">
+          <div class="muted">Sin diagnóstico aún.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <div class="body">
+        <h2>Base de conocimientos</h2>
+        <p class="sub">Reglas declarativas en JSON.</p>
+        <details>
+          <summary>Ver/ocultar reglas</summary>
+          <div style="margin: 12px 0;">
+            <button type="button" id="btnReloadRules" class="btn-small" style="background:#10b981">Recargar reglas</button>
+          </div>
+          <pre id="kbPre" class="muted" style="white-space:pre-wrap;max-height:320px;overflow:auto"></pre>
+        </details>
+      </div>
+      <div class="footer">
+        Proyecto académico – motor en JavaScript puro. Datos persistidos en la API.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:4000'
+      : 'https://diagnostic-api-ppg9.onrender.com';
+
+    const SYMPTOMS = [
+      { id:"no_power", label:"El equipo NO enciende (sin luces)" },
+      { id:"power_cable_ok", label:"Cable de energía y toma están OK" },
+      { id:"power_cable_bad", label:"Cable/toma con fallas (holgura/chispas)" },
+      { id:"burn_smell", label:"Olor/señal de quemado" },
+      { id:"no_burn_smell", label:"No hay olor a quemado" },
+      { id:"power_button_ok", label:"Botón de encendido hace buen contacto" },
+      { id:"power_button_bad", label:"Botón de encendido atascado / cableado suelto" },
+      { id:"fans_spin_no_image", label:"Ventiladores funcionan pero NO hay imagen" },
+      { id:"monitor_has_signal", label:"El monitor enciende y muestra 'sin señal'" },
+      { id:"monitor_no_signal", label:"Monitor sin retroiluminación/señal" },
+      { id:"video_cable_ok", label:"Cable de video conectado y monitor encendido" },
+      { id:"video_cable_bad", label:"Cable de video defectuoso / mala conexión" },
+      { id:"beeps_present", label:"Emite pitidos al arrancar" },
+      { id:"no_beeps", label:"NO emite pitidos" },
+      { id:"beeps_1l2s", label:"Patrón beeps: 1 largo, 2 cortos" },
+      { id:"beeps_continuous", label:"Pitidos continuos" },
+      { id:"beeps_other", label:"Código de beeps distinto" },
+      { id:"shows_image_no_boot", label:"Se muestra imagen pero NO inicia el SO" },
+      { id:"bios_accessible", label:"Se puede entrar a la BIOS" },
+      { id:"bios_not_accessible", label:"NO entra a la BIOS" },
+      { id:"os_loads_slow", label:"SO inicia muy lento" },
+      { id:"os_not_loading", label:"SO no carga (pantalla negra/loop)" },
+      { id:"disk_detected", label:"Disco detectado en BIOS" },
+      { id:"disk_not_detected", label:"Disco NO detectado en BIOS" },
+      { id:"ssd_installed", label:"Hay SSD instalado" },
+      { id:"hdd_installed", label:"Hay HDD instalado" },
+      { id:"noise_from_disk", label:"Ruidos inusuales en disco" },
+      { id:"ram_dual_channel", label:"RAM en doble canal" },
+      { id:"ram_single_channel", label:"RAM en un solo módulo/canal" },
+      { id:"ram_test_fail", label:"Prueba de RAM con errores" },
+      { id:"ram_test_ok", label:"Prueba de RAM OK" },
+      { id:"gpu_installed", label:"GPU dedicada instalada" },
+      { id:"gpu_not_detected", label:"GPU NO detectada en el sistema" },
+      { id:"gpu_artifacts", label:"Artefactos/imagen corrupta" },
+      { id:"overheat_casing", label:"Gabinete muy caliente" },
+      { id:"overheat_cpu", label:"CPU supera 90°C bajo carga" },
+      { id:"overheat_gpu", label:"GPU supera 90°C bajo carga" },
+      { id:"thermal_paste_old", label:"Pasta térmica >2 años" },
+      { id:"fans_dirty", label:"Ventiladores con polvo visible" },
+      { id:"fans_ok", label:"Ventiladores limpios y funcionales" },
+      { id:"psu_low_power", label:"Fuente con capacidad inferior a lo recomendado" },
+      { id:"psu_click_noise", label:"Se escuchan chasquidos en la fuente" },
+      { id:"psu_voltage_instable", label:"Voltajes inestables (multímetro/software)" },
+      { id:"usb_not_detected", label:"Puertos USB no funcionan" },
+      { id:"usb_short_detected", label:"Se detectó corto en puerto USB" },
+      { id:"motherboard_bent", label:"Placa madre presenta curvatura" },
+      { id:"motherboard_bulging_caps", label:"Condensadores inflados" },
+      { id:"motherboard_updated_bios", label:"BIOS actualizada recientemente" },
+      { id:"motherboard_old_bios", label:"BIOS sin actualizar (>2 años)" },
+      { id:"wifi_not_connecting", label:"Wi-Fi detecta redes pero no conecta" },
+      { id:"ethernet_not_detected", label:"Ethernet no detectada" },
+      { id:"sound_fail", label:"Sonido NO funciona" },
+      { id:"net_card_not_detected", label:"No detecta la tarjeta de red" },
+      { id:"net_detects_no_connect", label:"Detecta tarjeta pero NO conecta" },
+      { id:"network_ok", label:"Red y Wi-Fi funcionan correctamente" }
+    ];
+
+    let KB = [];
+    let currentUser = null;
+
+    function ensureSession(expectedRole) {
+      const saved = localStorage.getItem('user');
+      if (!saved) {
+        window.location.href = './index.html';
+        return null;
+      }
+      try {
+        const user = JSON.parse(saved);
+        if (expectedRole && user.role !== expectedRole) {
+          window.location.href = user.role === 'admin' ? './admin.html' : './user.html';
+          return null;
+        }
+        return user;
+      } catch (err) {
+        localStorage.removeItem('user');
+        window.location.href = './index.html';
+        return null;
+      }
+    }
+
+    function renderSymptoms() {
+      const container = document.getElementById('symptoms');
+      container.innerHTML = '';
+      SYMPTOMS.forEach(sym => {
+        const label = document.createElement('label');
+        label.className = 'sym';
+        label.innerHTML = `<input type="checkbox" data-sym="${sym.id}"> <span>${sym.label}</span>`;
+        container.appendChild(label);
+      });
+    }
+
+    function getSelected() {
+      const set = new Set();
+      document.querySelectorAll('input[type="checkbox"][data-sym]').forEach(box => {
+        if (box.checked) set.add(box.dataset.sym);
+      });
+      return set;
+    }
+
+    function diagnose(selected) {
+      if (!KB.length) {
+        const results = document.getElementById('results');
+        if (results) results.innerHTML = `<div class="muted">⚠️ No hay reglas cargadas.</div>`;
+        return [];
+      }
+      return KB.map(rule => {
+        const total = rule.if.length || 1;
+        const hit = rule.if.filter(x => selected.has(x)).length;
+        const score = (hit / total) * (rule.weight ?? 0.7);
+        return { id: rule.id, fault: rule.then.fault, advice: rule.then.advice || [], matched: hit, total, weight: rule.weight ?? 0.7, score };
+      })
+      .filter(r => r.score > 0.15)
+      .sort((a, b) => b.score - a.score);
+    }
+
+    function renderResults(list, selected) {
+      const container = document.getElementById('results');
+      if (!container) return;
+      if (!list.length) {
+        container.innerHTML = `<div class="muted">No hay hipótesis suficientes con los hechos actuales.</div>`;
+        return;
+      }
+      container.innerHTML = '';
+      list.forEach((r, i) => {
+        const percent = Math.round(r.score * 100);
+        const explainConds = (KB.find(k => k.id === r.id)?.if || []).map(id => ({
+          label: SYMPTOMS.find(s => s.id === id)?.label || id,
+          ok: selected.has(id)
+        }));
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.innerHTML = `
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <h3>${i + 1}. ${r.fault}</h3>
+            <span class="badge">Score: ${percent}%</span>
+          </div>
+          <div class="bar"><div class="fill" style="width:${percent}%"></div></div>
+          <div class="explain">Coincidencias: ${r.matched}/${r.total} · Peso: ${Math.round(r.weight * 100)}%</div>
+          <ul class="explain">${explainConds.map(c => `<li>${c.ok ? "✅" : "▫️"} ${c.label}</li>`).join('')}</ul>
+          <div class="muted" style="margin:6px 0 4px">Recomendaciones:</div>
+          <ul>${(r.advice || []).map(a => `<li>${a}</li>`).join('')}</ul>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function setupEventListeners() {
+      document.getElementById('btnDiagnose').addEventListener('click', () => {
+        const selected = getSelected();
+        const results = diagnose(selected);
+        renderResults(results, selected);
+        saveCaseToAPI(selected, results);
+      });
+
+      document.getElementById('btnLimpiar').addEventListener('click', () => {
+        document.querySelectorAll('input[type="checkbox"][data-sym]').forEach(box => box.checked = false);
+        document.getElementById('results').innerHTML = '<div class="muted">Sin diagnóstico aún.</div>';
+      });
+
+      document.getElementById('btnExport').addEventListener('click', () => {
+        const selected = getSelected();
+        const results = diagnose(selected);
+        const payload = {
+          timestamp: new Date().toISOString(),
+          selected: Array.from(selected),
+          results
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `caso_dx_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('btnReloadRules').addEventListener('click', () => {
+        loadRulesFromAPI();
+      });
+
+      document.getElementById('btnLogout').addEventListener('click', logout);
+    }
+
+    async function loadRulesFromAPI() {
+      const kbElement = document.getElementById('kbPre');
+      if (kbElement) kbElement.textContent = "Cargando reglas…";
+      try {
+        const res = await fetch(`${API_BASE}/api/rules?t=${Date.now()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rulesFromDb = await res.json();
+        KB = rulesFromDb.map(r => ({
+          id: r.ruleId,
+          if: r.conditions || [],
+          weight: r.weight ?? 0.7,
+          then: { fault: r.fault, advice: r.advice || [] }
+        }));
+        if (kbElement) kbElement.textContent = JSON.stringify(KB, null, 2);
+      } catch (err) {
+        if (kbElement) kbElement.textContent = `No se pudieron cargar las reglas: ${err.message}`;
+      }
+    }
+
+    async function saveCaseToAPI(selected, results) {
+      if (!currentUser) return;
+      try {
+        await fetch(`${API_BASE}/api/cases`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            timestamp: new Date().toISOString(),
+            selected: Array.from(selected),
+            results: results.map(r => ({
+              ruleId: r.id,
+              score: r.score,
+              matched: r.matched,
+              total: r.total,
+              weight: r.weight
+            }))
+          })
+        });
+      } catch (err) {
+        console.warn('No se pudo guardar el caso:', err.message);
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+      } finally {
+        localStorage.removeItem('user');
+        window.location.href = './index.html';
+      }
+    }
+
+    (function init() {
+      currentUser = ensureSession('user');
+      if (!currentUser) return;
+      document.getElementById('userInfo').textContent = `${currentUser.name || currentUser.email} · Usuario`;
+      renderSymptoms();
+      setupEventListeners();
+      loadRulesFromAPI();
+    })();
+  </script>
+</body>
+</html>

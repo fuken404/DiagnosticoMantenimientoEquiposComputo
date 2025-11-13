@@ -41,6 +41,12 @@ header h1 {
   flex: 1
 }
 
+.logo {
+  display: flex;
+  gap: 12px;
+  align-items: center
+}
+
 .header-right {
   display: flex;
   gap: 12px;
@@ -113,6 +119,12 @@ fieldset {
   fieldset {
     grid-template-columns: 1fr
   }
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px
 }
 
 label.sym {

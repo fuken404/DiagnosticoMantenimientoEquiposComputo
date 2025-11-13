@@ -3,594 +3,164 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sistema Experto de Hardware (JS puro)</title>
+  <title>Iniciar sesión · Sistema Experto Hardware</title>
   <link rel="stylesheet" href="./styles.css" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #0f172a;
+      color: #fff;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .card {
+      width: min(380px, 90vw);
+      padding: 32px 36px;
+      border-radius: 16px;
+      background: #1e293b;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.45);
+    }
+    h1 {
+      margin: 0 0 24px;
+      text-align: center;
+      font-size: 1.5rem;
+      letter-spacing: 0.01em;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+      color: #cbd5f5;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    input + label {
+      margin-top: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #6366f1, #3b82f6);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.35);
+    }
+    .muted {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+    .muted a {
+      color: #60a5fa;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .error {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(248, 113, 113, 0.15);
+      border: 1px solid rgba(248, 113, 113, 0.4);
+      color: #fecaca;
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" stroke="#64748b" stroke-width="1.5"/>
-      <path d="M8 9h8M8 13h6M8 17h4" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
-    <h1>Sistema experto para diagnóstico y mantenimiento de hardware</h1>
-    <div class="header-right">
-      <button type="button" id="btnToggleAuth" class="btn-small">Iniciar sesión</button>
-    </div>
-  </header>
+  <div class="card">
+    <h1>Sistema Experto Hardware</h1>
+    <form id="loginForm">
+      <label for="email">Correo electrónico</label>
+      <input id="email" type="email" placeholder="ejemplo@correo.com" autocomplete="username" required />
 
-  <main>
-    <!-- Modal de Autenticación -->
-    <div id="authModal" class="modal hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="authTitle">Iniciar sesión</h2>
-          <button type="button" class="close-btn" id="btnCloseAuth">&times;</button>
-        </div>
-        <form id="authForm">
-          <input type="email" id="authEmail" placeholder="Email" required />
-          <input type="password" id="authPassword" placeholder="Contraseña" required />
-          <input type="text" id="authName" placeholder="Nombre completo" style="display:none" />
-          <div id="authError" class="error" style="display:none"></div>
-          <div class="modal-buttons">
-            <button type="submit" id="btnAuthSubmit">Iniciar sesión</button>
-          </div>
-          <p id="toggleAuthMode" class="text-center muted" style="margin-top:12px;cursor:pointer">
-            ¿No tienes cuenta? <span style="color:#3b82f6">Regístrate aquí</span>
-          </p>
-        </form>
-      </div>
-    </div>
+      <label for="password">Contraseña</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" required minlength="8" />
 
-    <!-- Panel de usuario/admin -->
-    <div id="userPanel" class="user-panel hidden">
-      <span id="userInfo"></span>
-      <button type="button" id="btnLogout" class="btn-small-ghost">Cerrar sesión</button>
-    </div>
-
-    <!-- Panel de Admin -->
-    <div id="adminPanel" class="card hidden" style="margin: 24px; margin-bottom: 0;">
-      <div class="body">
-        <h2>🔧 Panel de Administrador</h2>
-        <p class="sub">Crear y gestionar reglas diagnósticas</p>
-        <form id="adminRuleForm">
-          <input type="text" id="adminRuleId" placeholder="ID de Regla (ej: F19)" required />
-          <textarea id="adminRuleFault" placeholder="Falla/Diagnóstico" required></textarea>
-          <input type="number" id="adminRuleWeight" placeholder="Peso (0-1)" min="0" max="1" step="0.1" value="0.7" />
-          <input type="text" id="adminRuleConditions" placeholder="Condiciones (separadas por comas)" />
-          <textarea id="adminRuleAdvice" placeholder="Recomendaciones (una por línea)"></textarea>
-          <div id="adminError" class="error" style="display:none"></div>
-          <button type="submit">Crear Regla</button>
-        </form>
-      </div>
-    </div>
-
-    <div id="mainContent">
-  </main>
+      <button type="submit">Iniciar sesión</button>
+      <div id="errorBox" class="error"></div>
+    </form>
+    <p class="muted">
+      ¿No tienes cuenta?
+      <a href="./register.html">Regístrate aquí</a>
+    </p>
+  </div>
 
   <script>
-  /* ===============================
-     Frontend – Sistema Experto (JS)
-     Con soporte para Auth y Admin
-     =============================== */
+    const API_BASE = window.location.hostname === "localhost"
+      ? "http://localhost:4000"
+      : "https://diagnostic-api-ppg9.onrender.com";
 
-  // Detecta si es producción o desarrollo
-  const API_BASE = window.location.hostname === 'localhost' 
-    ? "http://localhost:4000"
-    : "https://diagnostic-api-ppg9.onrender.com";
-  let currentUser = null;
-  let authMode = 'login'; // 'login' o 'register'
+    const ROUTES_BY_ROLE = {
+      admin: "./admin.html",
+      user: "./user.html"
+    };
 
-  // 1) Catálogo de síntomas
-  const SYMPTOMS = [
-    { id:"no_power", label:"El equipo NO enciende (sin luces)" },
-    { id:"power_cable_ok", label:"Cable de energía y toma están OK" },
-    { id:"power_cable_bad", label:"Cable/toma con fallas (holgura/chispas)" },
-    { id:"burn_smell", label:"Olor/señal de quemado" },
-    { id:"no_burn_smell", label:"No hay olor a quemado" },
-    { id:"power_button_ok", label:"Botón de encendido hace buen contacto" },
-    { id:"power_button_bad", label:"Botón de encendido atascado / cableado suelto" },
-    { id:"fans_spin_no_image", label:"Ventiladores funcionan pero NO hay imagen" },
-    { id:"monitor_has_signal", label:"El monitor enciende y muestra 'sin señal'" },
-    { id:"monitor_no_signal", label:"Monitor sin retroiluminación/señal" },
-    { id:"video_cable_ok", label:"Cable de video conectado y monitor encendido" },
-    { id:"video_cable_bad", label:"Cable de video defectuoso / mala conexión" },
-    { id:"beeps_present", label:"Emite pitidos al arrancar" },
-    { id:"no_beeps", label:"NO emite pitidos" },
-    { id:"beeps_1l2s", label:"Patrón beeps: 1 largo, 2 cortos" },
-    { id:"beeps_continuous", label:"Pitidos continuos" },
-    { id:"beeps_other", label:"Código de beeps distinto" },
-    { id:"shows_image_no_boot", label:"Se muestra imagen pero NO inicia el SO" },
-    { id:"bios_accessible", label:"Puedo ingresar a la BIOS" },
-    { id:"bios_inaccessible", label:"NO puedo ingresar a la BIOS" },
-    { id:"disk_detected", label:"Disco detectado en BIOS" },
-    { id:"disk_not_detected", label:"Disco NO detectado en BIOS" },
-    { id:"boot_error", label:"Mensaje de 'No boot' / 'Boot error'" },
-    { id:"bsod_or_restarts", label:"BSOD o reinicio tras iniciar" },
-    { id:"os_corrupt_signs", label:"Signos de SO/servicios críticos corruptos" },
-    { id:"very_slow", label:"El equipo inicia pero está MUY lento" },
-    { id:"smart_errors", label:"Errores SMART o disco al 100% sostenido" },
-    { id:"random_restart", label:"Se reinicia solo / se apaga sin aviso" },
-    { id:"overheat", label:"Sobrecalentamiento (temperaturas altas)" },
-    { id:"no_overheat", label:"NO hay signos de sobrecalentamiento" },
-    { id:"peripherals_ok", label:"Periféricos funcionan correctamente" },
-    { id:"peripherals_fail", label:"Periféricos con fallas (teclado/mouse/USB)" },
-    { id:"peripherals_detected_bios", label:"Periféricos se detectan en BIOS" },
-    { id:"peripherals_not_detected_bios", label:"Periféricos NO se detectan en BIOS" },
-    { id:"image_flicker", label:"Imagen con parpadeos/líneas" },
-    { id:"sound_ok", label:"Sonido OK" },
-    { id:"sound_fail", label:"Sonido NO funciona" },
-    { id:"net_card_not_detected", label:"No detecta la tarjeta de red" },
-    { id:"net_detects_no_connect", label:"Detecta tarjeta pero NO conecta" },
-    { id:"network_ok", label:"Red y Wi-Fi funcionan correctamente" }
-  ];
-
-  let KB = [];
-
-  // 2) Motor de inferencia
-  function diagnose(selected) {
-    if (!KB.length) {
-      const $results = document.getElementById('results');
-      if ($results) {
-        $results.innerHTML =
-          `<div class="muted">⚠️ No hay reglas cargadas. Revisa /api/rules o vuelve a cargar la página.</div>`;
-      }
-      return [];
-    }
-    return KB.map(rule => {
-      const total = rule.if.length || 1;
-      const hit = rule.if.filter(x => selected.has(x)).length;
-      const score = (hit / total) * (rule.weight ?? 0.7);
-      return { id: rule.id, fault: rule.then.fault, advice: rule.then.advice || [], matched: hit, total, weight: rule.weight ?? 0.7, score };
-    })
-    .filter(r => r.score > 0.15)
-    .sort((a,b) => b.score - a.score);
-  }
-
-  // 3) Render UI
-  const $mainContent = document.getElementById('mainContent');
-  const $modal    = document.getElementById('authModal');
-  const $userPanel = document.getElementById('userPanel');
-  const $adminPanel = document.getElementById('adminPanel');
-  let $kbPre = null;
-
-  function renderMainContent() {
-    if (!currentUser) return;
-    
-    const symptomsCard = `
-      <div class="body">
-        <h2>1) Selecciona los síntomas observados</h2>
-        <p class="sub">Marca todo lo que aplique. Luego haz clic en <b>Diagnosticar</b>.</p>
-        <form id="symForm">
-          <fieldset id="symptoms"></fieldset>
-          <div class="toolbar">
-            <button type="button" id="btnDiagnose">Diagnosticar</button>
-            <button type="button" class="secondary" id="btnLimpiar">Limpiar</button>
-            <button type="button" class="ghost" id="btnExport">Exportar caso</button>
-          </div>
-        </form>
-      </div>
-    `;
-    
-    const resultsCard = `
-      <section class="card">
-        <div class="body">
-          <h2>2) Resultados</h2>
-          <p class="sub">El motor de inferencia pondera reglas por coincidencia y certeza. Explicaciones incluidas.</p>
-          <div id="results" class="result">
-            <div class="muted">Sin diagnóstico aún.</div>
-          </div>
-        </div>
-      </section>
-    `;
-
-    const kbCard = `
-      <section class="card" style="grid-column: 1 / -1;">
-        <div class="body">
-          <h2>Base de conocimientos</h2>
-          <p class="sub">Reglas declarativas en JSON.</p>
-          <details>
-            <summary>Ver/ocultar reglas</summary>
-            <div style="margin-bottom: 12px;">
-              <button type="button" id="btnReloadRules" class="btn-small" style="background: #10b981;">🔄 Recargar reglas</button>
-            </div>
-            <pre id="kbPre" class="muted" style="white-space:pre-wrap"></pre>
-          </details>
-          <h2 style="margin-top:20px">Notas</h2>
-          <div class="kv">
-            <div class="muted">Estrategia</div>
-            <div>Encadenamiento <b>hacia adelante</b> (data-driven) con coincidencia parcial y factores de certeza.</div>
-            <div class="muted">Explicaciones</div>
-            <div>Se listan condiciones que activaron cada hipótesis y recomendaciones de mantenimiento.</div>
-            <div class="muted">Persistencia</div>
-            <div>Exporta cada caso en JSON para retroalimentación futura.</div>
-          </div>
-        </div>
-        <div class="footer">© Proyecto académico – UMB. Motor y UI en JavaScript sin librerías.</div>
-      </section>
-    `;
-
-    $mainContent.innerHTML = symptomsCard + resultsCard + kbCard;
-    $kbPre = document.getElementById('kbPre');
-
-    renderSymptoms();
-    setupEventListeners();
-  }
-
-  function renderSymptoms() {
-    const $symptoms = document.getElementById('symptoms');
-    if (!$symptoms) return;
-    
-    $symptoms.innerHTML = '';
-    SYMPTOMS.forEach(s => {
-      const el = document.createElement('label');
-      el.className = 'sym';
-      el.innerHTML = `<input type="checkbox" data-sym="${s.id}"/> <span>${s.label}</span>`;
-      $symptoms.appendChild(el);
-    });
-  }
-
-  function getSelected() {
-    const set = new Set();
-    document.querySelectorAll('input[type="checkbox"][data-sym]').forEach(b => {
-      if (b.checked) set.add(b.dataset.sym);
-    });
-    return set;
-  }
-
-  function renderResults(list, selected) {
-    const $results = document.getElementById('results');
-    if (!$results) return;
-    
-    if (!list.length) {
-      $results.innerHTML = `<div class="muted">No hay hipótesis suficientes con los hechos actuales.</div>`;
-      return;
-    }
-    $results.innerHTML = '';
-    list.forEach((r,i) => {
-      const percent = Math.round(r.score * 100);
-      const item = document.createElement('div');
-      item.className = 'item';
-      const explainConds = (KB.find(k=>k.id===r.id)?.if||[]).map(id => ({
-        label: SYMPTOMS.find(s=>s.id===id)?.label || id,
-        ok: selected.has(id)
-      }));
-      item.innerHTML = `
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <h3>${i+1}. ${r.fault}</h3>
-          <span class="badge">Score: ${percent}%</span>
-        </div>
-        <div class="bar"><div class="fill" style="width:${percent}%"></div></div>
-        <div class="explain">Coincidencias: ${r.matched}/${r.total} · Peso: ${Math.round(r.weight*100)}%</div>
-        <ul class="explain">${explainConds.map(c=>`<li>${c.ok ? "✅" : "▫️"} ${c.label}</li>`).join('')}</ul>
-        <div class="muted" style="margin:6px 0 4px">Recomendaciones:</div>
-        <ul>${(r.advice||[]).map(a=>`<li>${a}</li>`).join('')}</ul>
-      `;
-      $results.appendChild(item);
-    });
-  }
-
-  function setupEventListeners() {
-    const $btnDiagnose = document.getElementById('btnDiagnose');
-    const $btnLimpiar = document.getElementById('btnLimpiar');
-    const $btnExport = document.getElementById('btnExport');
-    const $btnReload = document.getElementById('btnReloadRules');
-
-    if ($btnDiagnose) {
-      $btnDiagnose.addEventListener('click', () => {
-        const sel = getSelected();
-        const res = diagnose(sel);
-        renderResults(res, sel);
-        saveCaseToAPI(sel, res);
-      });
+    function showError(msg) {
+      const box = document.getElementById("errorBox");
+      box.textContent = msg;
+      box.style.display = "block";
     }
 
-    if ($btnLimpiar) {
-      $btnLimpiar.addEventListener('click', () => {
-        document.querySelectorAll('input[type="checkbox"][data-sym]').forEach(b => b.checked = false);
-        const $results = document.getElementById('results');
-        if ($results) $results.innerHTML = '<div class="muted">Sin diagnóstico aún.</div>';
-      });
+    function redirectByRole(role) {
+      window.location.href = ROUTES_BY_ROLE[role] || ROUTES_BY_ROLE.user;
     }
 
-    if ($btnExport) {
-      $btnExport.addEventListener('click', () => {
-        const sel = getSelected();
-        const res = diagnose(sel);
-        const payload = { timestamp: new Date().toISOString(), selected: Array.from(sel), results: res };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `caso_dx_${Date.now()}.json`;
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      });
-    }
-
-    if ($btnReload) {
-      $btnReload.addEventListener('click', () => {
-        console.log('🔄 Recargando reglas...');
-        loadRulesFromAPI();
-      });
-    }
-  }
-
-  // 4) API calls
-  async function loadRulesFromAPI() {
-    try {
-      console.log("🔄 Cargando reglas desde API...");
-      const kbElement = document.getElementById('kbPre') || $kbPre;
-      if (kbElement) {
-        $kbPre = kbElement;
-        kbElement.textContent = "Cargando reglas…";
-      }
-      
-      const url = `${API_BASE}/api/rules?t=${Date.now()}`;
-      console.log("📡 URL:", url);
-      
-      const res = await fetch(url);
-      console.log("📊 Response status:", res.status);
-      
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
-      const rulesFromDb = await res.json();
-      console.log("📥 Reglas recibidas:", rulesFromDb.length, rulesFromDb);
-      
-      KB = rulesFromDb.map(r => ({
-        id: r.ruleId,
-        if: r.conditions || [],
-        weight: r.weight ?? 0.7,
-        then: { fault: r.fault, advice: r.advice || [] }
-      }));
-      
-      console.log("✅ KB procesada:", KB.length, "reglas");
-      
-      if ($kbPre) {
-        $kbPre.textContent = JSON.stringify(KB, null, 2);
-        console.log("✅ KB mostrada en pantalla");
-      } else {
-        console.warn("⚠️  $kbPre no existe");
-      }
-    } catch (e) {
-      console.error("❌ Error cargando reglas:", e);
-      if ($kbPre) $kbPre.textContent = `No se pudieron cargar las reglas: ${e.message}`;
-    }
-  }
-
-  async function saveCaseToAPI(selected, results) {
-    if (!currentUser) return;
-    try {
-      const payload = {
-        timestamp: new Date().toISOString(),
-        selected: Array.from(selected),
-        results: results.map(r => ({
-          ruleId: r.id,
-          score: r.score,
-          matched: r.matched,
-          total: r.total,
-          weight: r.weight
-        }))
-      };
-      const res = await fetch(`${API_BASE}/api/cases`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      console.log("Caso guardado.");
-    } catch (e) {
-      console.error("No se pudo guardar el caso:", e);
-    }
-  }
-
-  // 5) Auth functions
-  async function login(email, password) {
-    try {
-      console.log('🔓 Login attempt:', { email, API_BASE });
+    async function login(email, password) {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email, password })
       });
-      console.log('🔓 Login response status:', res.status);
       const data = await res.json();
-      console.log('🔓 Login response data:', data);
-      if (!res.ok) throw new Error(data.error || "Error al iniciar sesión");
-      
-      currentUser = data.user;
-      localStorage.setItem('user', JSON.stringify(currentUser));
-      console.log('✅ Login exitoso:', currentUser);
-      updateUI();
-      $modal.classList.add('hidden');
-      renderMainContent();
-      loadRulesFromAPI();
-    } catch (e) {
-      console.error('❌ Login error:', e);
-      showAuthError(e.message);
-    }
-  }
-
-  async function register(email, name, password) {
-    try {
-      console.log('📝 Register attempt:', { email, name, API_BASE });
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, name, password })
-      });
-      console.log('📝 Register response status:', res.status);
-      const data = await res.json();
-      console.log('📝 Register response data:', data);
-      if (!res.ok) throw new Error(data.error || "Error al registrarse");
-      
-      currentUser = data.user;
-      localStorage.setItem('user', JSON.stringify(currentUser));
-      console.log('✅ Register exitoso:', currentUser);
-      updateUI();
-      $modal.classList.add('hidden');
-      renderMainContent();
-      loadRulesFromAPI();
-    } catch (e) {
-      console.error('❌ Register error:', e);
-      showAuthError(e.message);
-    }
-  }
-
-  async function logout() {
-    try {
-      await fetch(`${API_BASE}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include"
-      });
-      currentUser = null;
-      localStorage.removeItem('user');
-      updateUI();
-      $mainContent.innerHTML = '';
-      $kbPre = null;
-      $modal.classList.remove('hidden');
-    } catch (e) {
-      console.error("Error al cerrar sesión:", e);
-    }
-  }
-
-  function updateUI() {
-    if (currentUser) {
-      $userPanel.classList.remove('hidden');
-      document.getElementById('userInfo').textContent = `${currentUser.name || currentUser.email}${currentUser.role === 'admin' ? ' (👨‍💼 Admin)' : ''}`;
-      document.getElementById('btnToggleAuth').style.display = 'none';
-      
-      if (currentUser.role === 'admin') {
-        $adminPanel.classList.remove('hidden');
-      } else {
-        $adminPanel.classList.add('hidden');
-      }
-    } else {
-      $userPanel.classList.add('hidden');
-      document.getElementById('btnToggleAuth').style.display = 'block';
-      $adminPanel.classList.add('hidden');
-    }
-  }
-
-  function showAuthError(msg) {
-    const $err = document.getElementById('authError');
-    if ($err) {
-      $err.textContent = msg;
-      $err.style.display = 'block';
-    }
-  }
-
-  // 6) Admin functions
-  async function createRule(ruleId, conditions, weight, fault, advice) {
-    if (!currentUser || currentUser.role !== 'admin') {
-      showAdminError("No autorizado");
-      return;
+      if (!res.ok) throw new Error(data.error || "No se pudo iniciar sesión");
+      return data;
     }
 
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/rules`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ruleId,
-          conditions: conditions.split(',').map(s => s.trim()).filter(Boolean),
-          weight: parseFloat(weight) || 0.7,
-          fault,
-          advice: advice.split('\n').map(s => s.trim()).filter(Boolean)
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al crear regla");
-      
-      alert("✅ Regla creada correctamente");
-      document.getElementById('adminRuleForm').reset();
-      loadRulesFromAPI();
-      renderResults(diagnose(getSelected()), getSelected());
-    } catch (e) {
-      showAdminError(e.message);
-    }
-  }
-
-  function showAdminError(msg) {
-    const $err = document.getElementById('adminError');
-    if ($err) {
-      $err.textContent = msg;
-      $err.style.display = 'block';
-      setTimeout(() => { $err.style.display = 'none'; }, 5000);
-    }
-  }
-
-  // 7) Event listeners
-  document.getElementById('btnToggleAuth').addEventListener('click', () => {
-    authMode = 'login';
-    document.getElementById('authTitle').textContent = 'Iniciar sesión';
-    document.getElementById('authName').style.display = 'none';
-    document.getElementById('authPassword').value = '';
-    document.getElementById('authEmail').value = '';
-    document.getElementById('authError').style.display = 'none';
-    $modal.classList.remove('hidden');
-  });
-
-  document.getElementById('btnCloseAuth').addEventListener('click', () => {
-    $modal.classList.add('hidden');
-  });
-
-  document.getElementById('toggleAuthMode').addEventListener('click', () => {
-    authMode = authMode === 'login' ? 'register' : 'login';
-    document.getElementById('authTitle').textContent = authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
-    document.getElementById('authName').style.display = authMode === 'register' ? 'block' : 'none';
-    document.getElementById('authError').style.display = 'none';
-  });
-
-  document.getElementById('authForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    console.log('📋 Form submitted, authMode:', authMode);
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    
-    if (authMode === 'login') {
-      console.log('🔓 Calling login()');
-      login(email, password);
-    } else {
-      const name = document.getElementById('authName').value;
-      console.log('📝 Calling register()');
-      register(email, name, password);
-    }
-  });
-
-  document.getElementById('btnLogout').addEventListener('click', logout);
-
-  const $adminRuleForm = document.getElementById('adminRuleForm');
-  if ($adminRuleForm) {
-    $adminRuleForm.addEventListener('submit', (e) => {
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      createRule(
-        document.getElementById('adminRuleId').value,
-        document.getElementById('adminRuleConditions').value,
-        document.getElementById('adminRuleWeight').value,
-        document.getElementById('adminRuleFault').value,
-        document.getElementById('adminRuleAdvice').value
-      );
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      document.getElementById("errorBox").style.display = "none";
+      try {
+        const data = await login(email, password);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        redirectByRole(data.user.role);
+      } catch (err) {
+        showError(err.message);
+      }
     });
-  }
 
-  // 8) Init
-  const saved = localStorage.getItem('user');
-  if (saved) {
-    try {
-      currentUser = JSON.parse(saved);
-      updateUI();
-      renderMainContent();
-      loadRulesFromAPI();
-    } catch (e) {
-      console.error("Error al cargar usuario:", e);
-      currentUser = null;
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      try {
+        const user = JSON.parse(saved);
+        redirectByRole(user.role);
+      } catch (_) {
+        localStorage.removeItem("user");
+      }
     }
-  }
-
-  if (!currentUser) {
-    $modal.classList.remove('hidden');
-  }
   </script>
 </body>
 </html>
