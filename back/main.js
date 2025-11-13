@@ -198,6 +198,22 @@ const start = async () => {
     await sequelize.sync({ alter: process.env.NODE_ENV !== "production" });
     console.log("Modelos sincronizados");
     
+    // Auto-seed: Si no hay reglas, cargarlas automáticamente
+    const ruleCount = await Rule.count();
+    if (ruleCount === 0) {
+      console.log("📋 No hay reglas. Cargando automáticamente...");
+      try {
+        const rules = await extractRulesFromJSON();
+        await Rule.bulkCreate(rules);
+        console.log(`✅ ${rules.length} reglas cargadas automáticamente al iniciar`);
+      } catch (err) {
+        console.error("⚠️  Error al cargar reglas automáticamente:", err.message);
+        // No es crítico si falla el seed automático
+      }
+    } else {
+      console.log(`✅ BD lista: ${ruleCount} reglas detectadas`);
+    }
+    
     const port = process.env.PORT || 4000;
     app.listen(port, () => console.log(`API corriendo en http://localhost:${port}`));
   } catch (error) {
