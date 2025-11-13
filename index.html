@@ -129,8 +129,11 @@
   // 2) Motor de inferencia
   function diagnose(selected) {
     if (!KB.length) {
-      document.getElementById('results').innerHTML =
-        `<div class="muted">⚠️ No hay reglas cargadas. Revisa /api/rules o vuelve a cargar la página.</div>`;
+      const $results = document.getElementById('results');
+      if ($results) {
+        $results.innerHTML =
+          `<div class="muted">⚠️ No hay reglas cargadas. Revisa /api/rules o vuelve a cargar la página.</div>`;
+      }
       return [];
     }
     return KB.map(rule => {
@@ -145,16 +148,15 @@
 
   // 3) Render UI
   const $mainContent = document.getElementById('mainContent');
-  const $results  = document.getElementById('results');
-  const $kbPre    = document.getElementById('kbPre');
   const $modal    = document.getElementById('authModal');
   const $userPanel = document.getElementById('userPanel');
   const $adminPanel = document.getElementById('adminPanel');
+  let $kbPre = null;
 
   function renderMainContent() {
     if (!currentUser) return;
     
-    $mainContent.innerHTML = `
+    const symptomsCard = `
       <div class="body">
         <h2>1) Selecciona los síntomas observados</h2>
         <p class="sub">Marca todo lo que aplique. Luego haz clic en <b>Diagnosticar</b>.</p>
@@ -168,7 +170,7 @@
         </form>
       </div>
     `;
-
+    
     const resultsCard = `
       <section class="card">
         <div class="body">
@@ -207,10 +209,8 @@
       </section>
     `;
 
-    document.querySelector('main').innerHTML = 
-      ($adminPanel.classList.contains('hidden') ? '' : $adminPanel.outerHTML) +
-      resultsCard +
-      kbCard;
+    $mainContent.innerHTML = symptomsCard + resultsCard + kbCard;
+    $kbPre = document.getElementById('kbPre');
 
     renderSymptoms();
     setupEventListeners();
@@ -273,6 +273,7 @@
     const $btnDiagnose = document.getElementById('btnDiagnose');
     const $btnLimpiar = document.getElementById('btnLimpiar');
     const $btnExport = document.getElementById('btnExport');
+    const $btnReload = document.getElementById('btnReloadRules');
 
     if ($btnDiagnose) {
       $btnDiagnose.addEventListener('click', () => {
@@ -302,13 +303,24 @@
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       });
     }
+
+    if ($btnReload) {
+      $btnReload.addEventListener('click', () => {
+        console.log('🔄 Recargando reglas...');
+        loadRulesFromAPI();
+      });
+    }
   }
 
   // 4) API calls
   async function loadRulesFromAPI() {
     try {
       console.log("🔄 Cargando reglas desde API...");
-      if ($kbPre) $kbPre.textContent = "Cargando reglas…";
+      const kbElement = document.getElementById('kbPre') || $kbPre;
+      if (kbElement) {
+        $kbPre = kbElement;
+        kbElement.textContent = "Cargando reglas…";
+      }
       
       const url = `${API_BASE}/api/rules?t=${Date.now()}`;
       console.log("📡 URL:", url);
@@ -433,6 +445,8 @@
       currentUser = null;
       localStorage.removeItem('user');
       updateUI();
+      $mainContent.innerHTML = '';
+      $kbPre = null;
       $modal.classList.remove('hidden');
     } catch (e) {
       console.error("Error al cerrar sesión:", e);
@@ -546,21 +560,19 @@
 
   document.getElementById('btnLogout').addEventListener('click', logout);
 
-  document.getElementById('btnReloadRules').addEventListener('click', () => {
-    console.log('🔄 Recargando reglas...');
-    loadRulesFromAPI();
-  });
-
-  document.getElementById('adminRuleForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    createRule(
-      document.getElementById('adminRuleId').value,
-      document.getElementById('adminRuleConditions').value,
-      document.getElementById('adminRuleWeight').value,
-      document.getElementById('adminRuleFault').value,
-      document.getElementById('adminRuleAdvice').value
-    );
-  });
+  const $adminRuleForm = document.getElementById('adminRuleForm');
+  if ($adminRuleForm) {
+    $adminRuleForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      createRule(
+        document.getElementById('adminRuleId').value,
+        document.getElementById('adminRuleConditions').value,
+        document.getElementById('adminRuleWeight').value,
+        document.getElementById('adminRuleFault').value,
+        document.getElementById('adminRuleAdvice').value
+      );
+    });
+  }
 
   // 8) Init
   const saved = localStorage.getItem('user');
