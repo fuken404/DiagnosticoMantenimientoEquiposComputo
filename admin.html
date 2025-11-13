@@ -197,14 +197,14 @@
         if (results) results.innerHTML = `<div class="muted">⚠️ No hay reglas cargadas.</div>`;
         return [];
       }
-      return KB.map(rule => {
-        const total = rule.if.length || 1;
-        const hit = rule.if.filter(x => selected.has(x)).length;
-        const score = (hit / total) * (rule.weight ?? 0.7);
-        return { id: rule.id, fault: rule.then.fault, advice: rule.then.advice || [], matched: hit, total, weight: rule.weight ?? 0.7, score };
-      })
-      .filter(r => r.score > 0.15)
-      .sort((a, b) => b.score - a.score);
+    return KB.map(rule => {
+      const total = rule.if.length || 1;
+      const hit = rule.if.filter(x => selected.has(x)).length;
+      const score = (hit / total) * (rule.weight ?? 0.7);
+      return { id: rule.id, fault: rule.then.fault, advice: rule.then.advice || [], matched: hit, total, weight: rule.weight ?? 0.7, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
     }
 
     function renderResults(list, selected) {
