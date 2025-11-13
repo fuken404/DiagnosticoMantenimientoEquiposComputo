@@ -307,19 +307,37 @@
   // 4) API calls
   async function loadRulesFromAPI() {
     try {
+      console.log("🔄 Cargando reglas desde API...");
       if ($kbPre) $kbPre.textContent = "Cargando reglas…";
-      const res = await fetch(`${API_BASE}/api/rules?t=${Date.now()}`);
+      
+      const url = `${API_BASE}/api/rules?t=${Date.now()}`;
+      console.log("📡 URL:", url);
+      
+      const res = await fetch(url);
+      console.log("📊 Response status:", res.status);
+      
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
       const rulesFromDb = await res.json();
+      console.log("📥 Reglas recibidas:", rulesFromDb.length, rulesFromDb);
+      
       KB = rulesFromDb.map(r => ({
         id: r.ruleId,
         if: r.conditions || [],
         weight: r.weight ?? 0.7,
         then: { fault: r.fault, advice: r.advice || [] }
       }));
-      if ($kbPre) $kbPre.textContent = JSON.stringify(KB, null, 2);
-      console.log("KB cargada:", KB.length);
+      
+      console.log("✅ KB procesada:", KB.length, "reglas");
+      
+      if ($kbPre) {
+        $kbPre.textContent = JSON.stringify(KB, null, 2);
+        console.log("✅ KB mostrada en pantalla");
+      } else {
+        console.warn("⚠️  $kbPre no existe");
+      }
     } catch (e) {
+      console.error("❌ Error cargando reglas:", e);
       if ($kbPre) $kbPre.textContent = `No se pudieron cargar las reglas: ${e.message}`;
     }
   }
