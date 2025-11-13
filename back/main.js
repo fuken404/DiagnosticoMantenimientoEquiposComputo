@@ -101,9 +101,15 @@ app.use("/api/auth", authLimiter, authRouter);
 
 /* ---------- Reglas ---------- */
 app.get("/api/rules", async (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  const rules = await Rule.findAll({ order: [["ruleId", "ASC"]] });
-  res.json(rules);
+  try {
+    res.set("Cache-Control", "no-store");
+    const rules = await Rule.findAll({ order: [["ruleId", "ASC"]] });
+    console.log(`📡 GET /api/rules → ${rules.length} reglas enviadas`);
+    res.json(rules);
+  } catch (err) {
+    console.error("❌ Error en GET /api/rules:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/api/rules/bulk", requireAuth, async (req, res) => {
@@ -193,31 +199,41 @@ app.get("/api/my-cases", requireAuth, async (req, res) => {
 const start = async () => {
   try {
     await sequelize.authenticate();
-    console.log("PostgreSQL conectado");
+    console.log("✅ PostgreSQL conectado");
     
     await sequelize.sync({ alter: process.env.NODE_ENV !== "production" });
-    console.log("Modelos sincronizados");
+    console.log("✅ Modelos sincronizados");
     
     // Auto-seed: Si no hay reglas, cargarlas automáticamente
     const ruleCount = await Rule.count();
+    console.log(`📊 Reglas en BD: ${ruleCount}`);
+    
     if (ruleCount === 0) {
-      console.log("📋 No hay reglas. Cargando automáticamente...");
+      console.log("🌱 BD vacía. Cargando reglas automáticamente...");
       try {
         const rules = await extractRulesFromJSON();
+        console.log(`📋 Extraídas ${rules.length} reglas del JSON`);
+        
         await Rule.bulkCreate(rules);
-        console.log(`✅ ${rules.length} reglas cargadas automáticamente al iniciar`);
+        
+        const newCount = await Rule.count();
+        console.log(`✅ ${newCount} reglas cargadas en la BD (verificación)`);
       } catch (err) {
-        console.error("⚠️  Error al cargar reglas automáticamente:", err.message);
-        // No es crítico si falla el seed automático
+        console.error("❌ Error al cargar reglas automáticamente:", err.message);
+        console.error("Stack:", err.stack);
       }
     } else {
-      console.log(`✅ BD lista: ${ruleCount} reglas detectadas`);
+      console.log(`✅ BD ya tiene ${ruleCount} reglas. No se hace auto-seed.`);
     }
     
+    // Verificación final
+    const finalCount = await Rule.count();
+    console.log(`📊 Estado final: ${finalCount} reglas en la BD`);
+    
     const port = process.env.PORT || 4000;
-    app.listen(port, () => console.log(`API corriendo en http://localhost:${port}`));
+    app.listen(port, () => console.log(`🚀 API corriendo en http://localhost:${port}`));
   } catch (error) {
-    console.error("Error al iniciar:", error);
+    console.error("❌ Error fatal al iniciar:", error);
     process.exit(1);
   }
 };
